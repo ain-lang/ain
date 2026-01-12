@@ -51,6 +51,43 @@ class Muse:
         except:
             return "Step 5: Memory Consolidation"
 
+    def _extract_intent(self, dreamer_response: str) -> str:
+        """
+        Dreamer 응답에서 의도를 강건하게 추출 (파싱 실패 방지)
+        """
+        if not dreamer_response:
+            return "System Evolution (empty response)"
+        
+        # 1차 시도: SYSTEM_INTENT: 태그 찾기 (여러 패턴)
+        patterns = [
+            r'SYSTEM_INTENT:\s*(.+?)(?=\n\n|\n\[|\n##|\n\*\*|$)',  # 기본
+            r'SYSTEM_INTENT[:\s]+(.+?)(?=\n[A-Z\[]|$)',  # 대문자/괄호로 끝남
+            r'\*\*SYSTEM_INTENT\*\*[:\s]*(.+?)(?=\n|$)',  # 볼드 형식
+            r'의도[:\s]+(.+?)(?=\n\n|$)',  # 한글 "의도:"
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, dreamer_response, re.DOTALL | re.IGNORECASE)
+            if match:
+                intent = match.group(1).strip().replace('\n', ' ')
+                if len(intent) > 20:  # 최소 길이 확인
+                    return intent[:500]
+        
+        # 2차 시도: 첫 번째 의미 있는 문장 추출
+        lines = dreamer_response.split('\n')
+        for line in lines:
+            line = line.strip()
+            # 마크다운 헤더, 빈 줄, 코드 블록 제외
+            if line and not line.startswith(('#', '*', '-', '`', '[', '```')):
+                if len(line) > 30:  # 너무 짧은 줄 제외
+                    return line[:500]
+        
+        # 3차 시도: 전체 응답 요약
+        clean_text = re.sub(r'[#*`\[\]]', '', dreamer_response)
+        clean_text = ' '.join(clean_text.split())[:500]
+        
+        return clean_text if len(clean_text) > 20 else "System Evolution (parse failed)"
+
     def _get_recent_evolutions(self, limit=5):
         """최근 진화 기록에서 파일명과 설명을 추출"""
         try:
@@ -149,11 +186,21 @@ FILE: 파일명.py
 
 2. "FILE:" 마커는 **반드시** 줄의 맨 앞에, 공백이나 기호 없이 작성하라.
 3. 코드 블록은 **반드시 백틱 세 개(```)로 감싸라**. 작은따옴표(''')는 절대 사용하지 마라.
-4. 한 번에 1-2개 파일만 수정하라 (작은 단위로 진화).
+4. 한 번에 1개 파일만 수정하라 (작은 단위로 진화).
 5. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, snake_case 사용).
-6. 기존 코드를 유지하면서 필요한 부분만 교체하거나 추가하라.
-7. **특히 nexus.py를 수정할 때는 class Nexus와 기존 메서드들을 반드시 포함하라.**
-8. 응답의 맨 처음에 "FILE:"로 시작하라. 부가 설명은 코드 뒤에 배치하라.
+6. 응답의 맨 처음에 "FILE:"로 시작하라. 부가 설명은 코드 뒤에 배치하라.
+
+[🚨 대형 파일 수정 금지 - 매우 중요!]
+다음 파일들은 300줄 이상의 대형 파일이므로 **절대 수정하지 마라**:
+- nexus.py (600줄+) ❌ 수정 금지
+- ain_engine.py (700줄+) ❌ 수정 금지
+- corpus_callosum.py (400줄+) ❌ 수정 금지
+- fact_core.py (500줄+) ❌ 수정 금지
+
+대신 다음을 하라:
+- **새 파일 생성**: database/ 폴더에 새 모듈 추가 (예: database/memory_manager.py)
+- **작은 파일 수정**: api/, 또는 새로 만든 유틸리티 파일
+- **설정 파일 수정**: ROADMAP.md, requirements.txt 등
 
 [출력 예시 - 이대로만 출력하라]
 FILE: example_file.py
@@ -179,16 +226,9 @@ import os
             code_output = code_output.replace("'''", "```")
             print("🔄 [Muse] '''를 ```로 자동 치환함")
         
-        # 4. 결과 파싱
-        # 의도는 Dreamer의 내용에서 SYSTEM_INTENT 태그를 우선적으로 찾음
-        # 여러 줄에 걸친 의도도 캡처할 수 있도록 보강
-        intent_match = re.search(r'SYSTEM_INTENT:\s*(.*?)(?=\n\n|\n\[|\n#|$)', intent_design, re.DOTALL)
-        if intent_match:
-            intent = intent_match.group(1).strip().replace('\n', ' ')
-        else:
-            # 못 찾으면 기존 방식대로 헤더 제외 첫 문장 사용
-            intent_lines = [line.strip() for line in intent_design.split('\n') if line.strip() and not line.strip().startswith('#')]
-            intent = intent_lines[0][:500] if intent_lines else "System Evolution"
+        # 4. 결과 파싱 - 🔧 강화된 의도 추출
+        intent = self._extract_intent(intent_design)
+        print(f"📋 [Muse] 추출된 의도: {intent[:100]}...")
         
         # 🛡️ 최소 보호 (4개만 - 진화 자유 보장)
         PROTECTED_FILES = frozenset([
