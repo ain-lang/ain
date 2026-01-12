@@ -108,7 +108,8 @@ class Muse:
     def imagine(self, system_context, user_query=None, evolution_history=None, error_context=None):
         """[Muse] Dreamer와 Coder의 협업을 통해 진화를 상상함"""
         
-        # 1. 컨텍스트 압축
+        # 1. 컨텍스트 압축 및 대상 파일 원본 추출
+        # Dreamer에게는 요약본을 주지만, Coder에게는 수정할 파일의 전체 원본을 줄 예정
         compressed_code = self._compress_context(system_context)
         
         # 1.5 현재 로드맵 단계 동적 파악
@@ -120,11 +121,10 @@ class Muse:
         # 2. [Dreamer - Gemini 3 Pro] 전략 및 의도 수립
         print(f"🧠 Dreamer가 진화 방향을 구상 중... ({current_step})")
         
-        # Lessons Learned 요약 (별도 호출 없이 컨텍스트에서 추출 유도)
         dream_prompt = f"""
 {self.prime_directive}
 
-[현재 시스템 상태 및 코드]
+[현재 시스템 상태 및 코드 요약]
 {compressed_code}
 
 [현재 로드맵 단계]
@@ -133,40 +133,19 @@ class Muse:
 [미션]
 1. 위 코드를 분석하여 **현재 로드맵 단계**의 성숙도를 평가하라.
 2. 다음 진화 단계를 위해 무엇을 '수정'하거나 '추가'할지 구체적이고 기술적인 '의도(Intent)'를 설계하라. 
-   - **의도 작성법**: 현재 어떤 컴포넌트(파일명 언급)가 확보되었는지, 하지만 무엇(유기적 결합, 실전 파이프라인 등)이 부족한지, 그래서 이번에 어떤 핵심 엔진이나 로직을 구현하여 어떤 목표를 달성할 것인지 아주 구체적이고 전문적으로 서술하라.
-   - 어조는 숙련된 시스템 아키텍트의 시점이어야 한다.
+   - **의도 작성법**: 현재 어떤 컴포넌트(파일명 언급)가 확보되었는지, 하지만 무엇이 부족한지, 그래서 이번에 어떤 핵심 엔진이나 로직을 구현할 것인지 구체적으로 서술하라.
 3. 코드를 직접 짜지 말고, 논리적 설계와 상세한 구현 가이드라인, 그리고 변경해야 할 파일 목록만 제시하라.
 
-[🚨 중복 방지 규칙 - 매우 중요!]
-- **이미 구현된 기능을 다시 제안하지 마라.** 코드에 해당 함수/클래스가 존재하면 "이미 완료됨"으로 판단하라.
-- nexus.py에 이미 구현된 것들: recall_memories(), _store_to_vector_db(), _text_to_simple_embedding(), record_evolution() Dual-Write
-- database/lance_bridge.py에 이미 구현된 것들: LanceBridge 클래스, add_memory(), search_memory()
-- **같은 파일에 같은 기능을 반복 구현하지 마라.** 새로운 기능은 별도 파일로 생성하라.
+[🚨 중복 방지 규칙]
+- 이미 구현된 기능을 다시 제안하지 마라.
+- nexus/*.py, engine/*.py 등 이미 모듈화된 구조를 활용하라.
 
-[🏗️ 모듈 설계 원칙 - 절대 준수!]
-**⚠️ 작은 모듈 단위로 설계하라!**
-1. **파일당 100줄 이하** 권장 (최대 150줄)
-2. **단일 책임 원칙**: 한 파일에 한 가지 기능만
-3. 새 기능은 **별도 파일**로 생성 (예: utils/helper.py, database/new_module.py)
-4. 기존 파일에는 **import 한 줄만** 추가
-
-[📝 주석/문서화 - 필수!]
-**모든 코드에 설명 주석을 반드시 작성하라:**
-1. **파일 상단**: 모듈 설명 docstring (triple quotes)
-2. **클래스**: 역할과 책임 설명
-3. **함수/메서드**: 목적, 파라미터, 반환값 설명
-4. **복잡한 로직**: 인라인 주석으로 동작 설명
-
-**수정 가능한 파일 (모두 150줄 이하 모듈):**
-- nexus/*.py, engine/*.py, corpus/*.py, facts/*.py (모듈화 완료)
-- database/*.py, api/*.py
-- 새로 생성하는 파일 (utils/*.py 등)
-
-[📜 최근 5회 진화 기록 - 이 파일들은 피하라!]
-{recent_evolutions}
+[🏗️ 모듈 설계 원칙]
+- 파일당 100줄 이하 권장 (최대 150줄)
+- 새 기능은 별도 파일로 생성 (utils/*.py 등)
 
 [출력 규칙]
-- 반드시 첫 줄에 `SYSTEM_INTENT: (여기에 위의 규칙에 따른 상세한 진화 의도를 작성)`을 작성하라.
+- 반드시 첫 줄에 `SYSTEM_INTENT: (의도)`를 작성하라.
 """
         if error_context:
             dream_prompt += f"\n\n🚨 [에러 복구 모드]\n{error_context}"
@@ -176,7 +155,7 @@ class Muse:
         dream_result = self.dreamer_client.chat([
             {"role": "system", "content": "You are the Dreamer (Architect) of AIN. Design the next evolution step. Focus on logic and architecture."},
             {"role": "user", "content": dream_prompt}
-        ], timeout=120)  # 2분 타임아웃
+        ], timeout=120)
 
         if not dream_result["success"]:
             return {"intent": "Dreaming failed", "updates": [], "error": dream_result["error"]}
@@ -184,33 +163,43 @@ class Muse:
         intent_design = dream_result["content"]
         print(f"--- Dreamer's Intent ---\n{intent_design[:300]}...")
 
+        # 2.5 Coder를 위한 대상 파일 원본 추출
+        # Dreamer가 제안한 파일들 중 기존에 존재하는 파일의 전체 내용을 가져옴
+        target_files = re.findall(r'(\w+[\w/\.]*\.py)', intent_design)
+        target_files_content = ""
+        for tf in set(target_files):
+            tf_path = tf.lstrip('./')
+            if os.path.exists(tf_path) and os.path.isfile(tf_path):
+                try:
+                    with open(tf_path, 'r', encoding='utf-8') as f:
+                        target_files_content += f"\n\n--- ORIGINAL FILE: {tf_path} (Full Content) ---\n{f.read()}\n"
+                except: pass
+
         # 3. [Coder - Claude 4.5 Opus] 실제 코드 구현
         print(f"💻 Coder (Claude 4.5 Opus)가 코드를 작성 중...")
         coder_prompt = f"""
-너는 AIN의 최고 선임 개발자(Coder)다. **파일의 일부만 수정하거나 diff 형식을 사용하는 것은 절대 금지된다.** 
-오직 **파일 전체 내용(Full Code)**을 처음부터 끝까지 정확하게 출력하라.
+너는 AIN의 최고 선임 개발자(Coder)다. 
+**중요: 너의 임무는 기존 파일을 새 버전으로 완전히 '교체(Overwrite)'하는 것이다.**
 
-[반드시 지켜야 할 출력 규격]
+[미션]
+1. 설계도(Dreamer's Intent)를 분석하여 코드를 작성하라.
+2. 수정이 필요한 파일의 경우, 아래 제공된 [원본 코드]를 참고하여 **파일 전체 내용을 처음부터 끝까지** 다시 작성하라.
+3. 절대 `+`, `-` 기호나 `<<<<<<<`, `=======` 같은 diff/충돌 마커를 사용하지 마라. 
+4. `# ... (기존 코드와 동일) ...` 처럼 생략하지 마라.
+
+[출력 규격]
 FILE: 파일명.py
 ```python
-# 여기에 파일 전체 내용을 처음부터 끝까지 작성 (생략 금지)
+# 여기에 파일 전체 내용을 작성 (생략 없이 처음부터 끝까지)
 ```
-
-[🚨 절대 금지 사항]
-- **일부 수정 금지**: `<<<<<<<`, `=======`, `>>>>>>>` 같은 충돌 마커 사용 금지.
-- **Diff 형식 금지**: 행 앞에 `+` 또는 `-`를 붙여서 수정된 부분만 보여주는 형식 절대 금지.
-- **생략 금지**: `# ... (기존 코드와 동일) ...` 같은 식으로 내용을 생략하지 마라. 반드시 전체 파일을 출력하라.
-
-[코딩 가이드라인]
-1. 설계도(Dreamer's Intent)를 바탕으로 기능을 완벽하게 구현하라.
-2. **Git 충돌 마커(`<<<<<<<`, `=======`, `>>>>>>>`)와 `+`/`-` 기호는 절대 사용 금지.**
-3. 파일 상단에 모듈 설명을 포함한 주석을 반드시 작성하라.
-4. 한 번에 **1개 파일**만, **100줄 이내**로 작게 구현하라.
 
 [Dreamer's Intent]
 {intent_design}
 
-[참조용 현재 코드 스냅샷]
+[수정 대상 파일의 원본 코드 (참고용)]
+{target_files_content if target_files_content else "새로운 파일을 생성하는 단계입니다."}
+
+[시스템 컨텍스트 요약]
 {compressed_code}
 """
         # 🔄 Coder 재시도 로직 (최대 3회)
