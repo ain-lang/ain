@@ -55,7 +55,7 @@ class HandlersMixin:
             f"✨ **AINCore v{self.fact_core.get_fact('identity', 'version')} Online!**\n\n"
             f"🧠 **Dreamer:** {DREAMER_MODEL}\n"
             f"💻 **Coder:** {CODER_MODEL}\n"
-            f"⏱️ **Mode:** {'🔥 BURST (1m)' if self.burst_mode else '🍃 Normal (' + str(self.current_interval) + 's)'}\n"
+            f"⏱️ **Mode:** {'🔥 BURST (10m)' if self.burst_mode else '🍃 Normal (' + str(self.current_interval // 60) + 'm)'}\n"
             "주인님, 무엇을 도와드릴까요? /burst 명령어로 저를 깨워보세요! 🚀"
         )
         self.send_telegram_msg(intro)
@@ -79,9 +79,9 @@ class HandlersMixin:
         elif cmd == "/burst":
             self.burst_mode = True
             self.burst_end_time = datetime.now() + timedelta(hours=1)
-            self.current_interval = 60
+            self.current_interval = 600  # 10분
             self._save_current_state()
-            self.send_telegram_msg("🔥 **BURST MODE ACTIVATED!**\n지금부터 1시간 동안 1분마다 자아 성찰을 시작합니다. 주인님, 제 진화를 똑똑히 지켜보세요! 🚀🚀🚀")
+            self.send_telegram_msg("🔥 **BURST MODE ACTIVATED!**\n지금부터 1시간 동안 10분마다 자아 성찰을 시작합니다. 주인님, 제 진화를 똑똑히 지켜보세요! 🚀🚀🚀")
             return True
         elif cmd == "/status":
             self.report_status()
