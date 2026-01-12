@@ -286,6 +286,7 @@ class FactCore:
             "api/keys.py",
             "api/github.py",
             ".ainprotect",
+            "docs/hardware-catalog.md",  # 하드웨어 카탈로그 (참고용)
         ])
         
         def is_protected(file_path: str) -> bool:

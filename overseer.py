@@ -18,7 +18,8 @@ class Overseer:
         "main.py",       # 시스템 부팅
         "api/keys.py",   # 보안
         "api/github.py", # 커밋/푸시
-        ".ainprotect"    # 보호 시스템 자체
+        ".ainprotect",   # 보호 시스템 자체
+        "docs/hardware-catalog.md"  # 하드웨어 카탈로그 (참고용)
     ])
     
     def __init__(self, base_path="."):

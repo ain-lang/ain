@@ -120,7 +120,8 @@ class Muse:
         
         # 🛡️ 최소 보호 (4개만 - 진화 자유 보장)
         PROTECTED_FILES = frozenset([
-            "main.py", "api/keys.py", "api/github.py", ".ainprotect"
+            "main.py", "api/keys.py", "api/github.py", ".ainprotect",
+            "docs/hardware-catalog.md"  # 하드웨어 카탈로그 (참고용)
         ])
         
         updates = []
