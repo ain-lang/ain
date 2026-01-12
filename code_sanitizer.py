@@ -113,7 +113,7 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
     result["has_conflict"] = any(marker in code_output for marker in CONFLICT_MARKERS)
     
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 4: Diff 형식 감지
+    # Step 4: Diff 형식 감지 및 자동 변환
     # ─────────────────────────────────────────────────────────────────────────
     current_lines = code_output.split('\n')
     diff_indicators = [
@@ -121,7 +121,64 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
         if l.strip().startswith('+ ') or l.strip().startswith('- ')
     ]
     result["diff_count"] = len(diff_indicators)
-    result["has_diff"] = len(diff_indicators) > 3 or '@@ ' in code_output
+    has_diff_format = len(diff_indicators) > 3 or '@@ ' in code_output
+    
+    # 🔧 Diff 형식 자동 변환 (코드 블록 내부에서만)
+    if has_diff_format:
+        converted_lines = []
+        in_code_block = False
+        diff_converted = 0
+        diff_removed = 0
+        
+        for line in current_lines:
+            # 코드 블록 시작/끝 감지
+            if line.strip().startswith('```'):
+                in_code_block = not in_code_block
+                converted_lines.append(line)
+                continue
+            
+            # 코드 블록 내부에서만 diff 변환
+            if in_code_block:
+                # @@ 마커 제거
+                if line.strip().startswith('@@') and '@@' in line[2:]:
+                    diff_removed += 1
+                    continue
+                
+                # + 로 시작하는 줄: prefix 제거하고 추가
+                if line.startswith('+ ') or line.startswith('+\t'):
+                    converted_lines.append(line[1:])  # '+' 제거, 공백/탭 유지
+                    diff_converted += 1
+                    continue
+                elif line == '+':  # 빈 줄 추가
+                    converted_lines.append('')
+                    diff_converted += 1
+                    continue
+                
+                # - 로 시작하는 줄: 삭제된 줄이므로 제거
+                if line.startswith('- ') or line.startswith('-\t') or line == '-':
+                    diff_removed += 1
+                    continue
+                
+                # 일반 줄 (컨텍스트)
+                converted_lines.append(line)
+            else:
+                converted_lines.append(line)
+        
+        if diff_converted > 0 or diff_removed > 0:
+            code_output = '\n'.join(converted_lines)
+            result["cleaned"] = True
+            result["diff_converted"] = diff_converted
+            result["diff_removed"] = diff_removed
+            if verbose:
+                print(f"🔧 [Sanitizer] Diff 형식 자동 변환: +{diff_converted}줄 변환, -{diff_removed}줄 제거")
+    
+    # 변환 후 다시 감지
+    final_lines = code_output.split('\n')
+    remaining_diff = [
+        l for l in final_lines 
+        if l.strip().startswith('+ ') or l.strip().startswith('- ')
+    ]
+    result["has_diff"] = len(remaining_diff) > 3 or '@@ ' in code_output
     
     # ─────────────────────────────────────────────────────────────────────────
     # Step 5: 생략 패턴 감지
