@@ -221,7 +221,8 @@ class MemoryConsolidator:
 ```
 
 **작은 파일(200줄 이하)은 전체 코드 작성 가능:**
-- api/*.py, database/*.py의 새 파일
+- nexus/*.py (모듈화됨: core.py, memory.py, history.py, arrow.py, storage.py)
+- api/*.py, database/*.py
 - 유틸리티 모듈, 테스트 파일 등
 
 [출력 예시 - 이대로만 출력하라]
