@@ -35,6 +35,14 @@ class GitHubClient:
             return False, "❌ git 미설치", None, {}
         
         debug = {"stages": [], "diff_stat": "", "changed_files": 0}
+        
+        # 🔍 토큰 검증
+        token_info = f"len={len(self.token) if self.token else 0}, prefix={self.token[:4] if self.token and len(self.token) > 4 else 'N/A'}"
+        print(f"🔑 Token info: {token_info}")
+        debug["token_info"] = token_info
+        
+        if not self.token or len(self.token) < 10:
+            return False, f"❌ GitHub 토큰 없음 또는 너무 짧음 ({token_info})", None, debug
 
         try:
             # 1. 안전한 디렉토리 설정 (Docker/Railway 환경 대응 핵심!)
@@ -47,6 +55,7 @@ class GitHubClient:
             
             # 3. .git 폴더가 없으면 init + remote 연결 (기존 파일 유지)
             remote_url = f"https://{self.token}@github.com/{self.repo_name}.git"
+            debug["repo"] = self.repo_name
             if not os.path.exists(".git"):
                 print("📂 .git 폴더가 없어 init + remote 연결을 진행합니다.")
                 subprocess.run([git_path, "init"], check=True)

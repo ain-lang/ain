@@ -139,7 +139,8 @@ class IntrospectMixin:
                             stages = ' → '.join(debug.get('stages', []))
                             issue = debug.get('push_issue', '')
                             if issue:
-                                self.send_telegram_msg(f"🚨 푸시 실패! ({', '.join(applied)})\n📊 {stages}\n⚠️ {issue[:200]}")
+                                token_info = debug.get('token_info', 'N/A')
+                                self.send_telegram_msg(f"🚨 푸시 실패! ({', '.join(applied)})\n📊 {stages}\n🔑 {token_info}\n⚠️ {issue[:200]}")
                             else:
                                 debug_str = f"\n📊 diff: {debug.get('diff_stat', 'N/A')[:100]}"
                                 self.send_telegram_msg(f"✨ 진화 완료! ({', '.join(applied)}) - 변경사항 없음\n📊 {stages}{debug_str}")
