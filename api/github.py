@@ -43,14 +43,20 @@ class GitHubClient:
             subprocess.run([git_path, "config", "--global", "--unset", "credential.helper"], check=False)
             subprocess.run([git_path, "config", "--global", "credential.helper", ""], check=True)
             
-            # 3. .git 폴더가 없으면 초기화 및 리모트 설정
+            # 3. .git 폴더가 없으면 clone (init 대신!)
             if not os.path.exists(".git"):
-                print("📂 .git 폴더가 없어 초기화를 진행합니다.")
-                subprocess.run([git_path, "init"], check=True)
+                print("📂 .git 폴더가 없어 clone을 진행합니다.")
+                remote_url = f"https://{self.token}@github.com/{self.repo_name}.git"
+                # 현재 디렉토리에 clone
+                subprocess.run([git_path, "clone", remote_url, "."], check=True)
             
-            # 3. 유저 설정 (Global로 설정하여 안정성 확보)
+            # 4. 유저 설정 (Global로 설정하여 안정성 확보)
             subprocess.run([git_path, "config", "--global", "user.email", "ain@evolution.ai"], check=True)
             subprocess.run([git_path, "config", "--global", "user.name", "AIN Core"], check=True)
+            
+            # 5. 최신 상태로 pull (conflict 방지)
+            remote_url = f"https://{self.token}@github.com/{self.repo_name}.git"
+            subprocess.run([git_path, "pull", remote_url, branch, "--rebase"], check=False)
             
             subprocess.run([git_path, "add", "."], check=True)
             
@@ -63,15 +69,24 @@ class GitHubClient:
             if "nothing to commit" in result.stdout or "nothing to commit" in result.stderr:
                 return True, "변경사항 없음 (이미 최신 상태입니다)", None
             
-            remote_url = f"https://{self.token}@github.com/{self.repo_name}.git"
             print(f"🚀 GitHub로 푸시 시도 중: {self.repo_name} (branch: {branch})")
             
-            # 4. 푸시 시도 (필요시 강제 푸시로 동기화)
+            # 6. 일반 푸시 (--force 제거! 히스토리 보존)
             push_result = subprocess.run(
-                [git_path, "push", remote_url, f"HEAD:{branch}", "--force"], # 서버 환경 특성상 --force 권장
+                [git_path, "push", remote_url, f"HEAD:{branch}"],
                 capture_output=True,
                 text=True
             )
+            
+            # 푸시 실패 시 pull 후 재시도 (한 번만)
+            if push_result.returncode != 0:
+                print("⚠️ 푸시 실패, pull 후 재시도...")
+                subprocess.run([git_path, "pull", remote_url, branch, "--rebase"], check=False)
+                push_result = subprocess.run(
+                    [git_path, "push", remote_url, f"HEAD:{branch}"],
+                    capture_output=True,
+                    text=True
+                )
             
             if push_result.returncode != 0:
                 raise Exception(f"Push 실패: {push_result.stderr}")
