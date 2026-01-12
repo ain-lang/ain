@@ -154,8 +154,8 @@ import os
         if not file_sections:
             # FILE: 마커가 없으면 대체 패턴 시도 (파일명: 형식)
             print("⚠️ [Muse] FILE: 마커 없음, 대체 패턴 시도...")
-            # 1. ```python:filename.py 형식
-            alt_pattern = re.findall(r'```(?:python|py)?:?\s*(\S+\.py)\s*\n(.*?)```', code_output, re.DOTALL)
+            # 1. ```python:filename.py 또는 '''python:filename.py 형식
+            alt_pattern = re.findall(r'(?:```|\'\'\')(?:python|py)?:?\s*(\S+\.py)\s*\n(.*?)(?:```|\'\'\')', code_output, re.DOTALL)
             for filename, code in alt_pattern:
                 filename = filename.strip().lstrip('./')
                 if filename not in PROTECTED_FILES:
@@ -164,7 +164,7 @@ import os
             
             # 2. 파일명만 있고 코드블록이 바로 뒤따르는 경우
             if not updates:
-                alt_pattern2 = re.findall(r'(?:\n|^)([a-zA-Z0-9_/]+\.py)\s*\n\s*```(?:python|py)?\n(.*?)```', code_output, re.DOTALL)
+                alt_pattern2 = re.findall(r'(?:\n|^)([a-zA-Z0-9_/]+\.py)\s*\n\s*(?:```|\'\'\')(?:python|py)?\n(.*?)(?:```|\'\'\')', code_output, re.DOTALL)
                 for filename, code in alt_pattern2:
                     filename = filename.strip().lstrip('./')
                     if filename not in PROTECTED_FILES:
@@ -192,8 +192,8 @@ import os
                 print(f"🛡️ [Muse] 보호된 파일 건너뜀: {filename}")
                 continue
             
-            # 마크다운 코드 블록 추출 (언어 태그 유무 상관없이 추출)
-            code_match = re.search(r'```(?:\w+)?\s*(.*?)\s*```', section, re.DOTALL)
+            # 마크다운 코드 블록 추출 (백틱 ``` 또는 작은따옴표 ''' 모두 허용)
+            code_match = re.search(r'(?:```|\'\'\')(?:\w+)?\s*(.*?)\s*(?:```|\'\'\')', section, re.DOTALL)
             if code_match:
                 code_content = code_match.group(1).strip()
                 if filename and code_content and len(code_content) > 10:
