@@ -2,6 +2,7 @@ import re
 import os
 from api import OpenRouterClient
 from code_sanitizer import sanitize_code_output, get_error_message, is_valid_output
+from utils.error_memory import get_error_memory
 
 class Muse:
     """
@@ -241,6 +242,12 @@ import ...
 [시스템 컨텍스트 (참고용)]
 {compressed_code}
 """
+        # 🧠 실패 기억에서 힌트 가져오기
+        error_memory = get_error_memory()
+        memory_hints = error_memory.get_all_hints(target_files)
+        if memory_hints:
+            coder_prompt += f"\n\n[🧠 과거 실패 기록 - 같은 실수 반복 금지!]\n{memory_hints}"
+        
         # 🔄 Coder 재시도 로직 (최대 5회)
         MAX_CODER_RETRIES = 5
         last_error = None
@@ -288,6 +295,10 @@ import ...
                 except SyntaxError as e:
                     last_error = f"Python 구문 오류: {e}. 올바른 Python 문법으로 다시 작성하라."
                     print(f"🚨 [Muse] 구문 오류 감지! 재시도...")
+                    # 🧠 실패 기억에 기록
+                    error_type = str(e).split('(')[0].strip()  # 예: "unterminated string literal"
+                    for tf in target_files:
+                        error_memory.record_error(tf, error_type, str(e))
                     continue
             
             # 모든 검사 통과

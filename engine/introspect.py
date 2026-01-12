@@ -4,6 +4,7 @@ Engine Introspect: 자기 성찰 및 진화 시도 (Legacy 메인 루프용)
 from datetime import datetime, timedelta
 
 from api import get_config
+from utils.error_memory import get_error_memory
 
 config = get_config()
 DEFAULT_INTERVAL = config["evolution_interval"]
@@ -57,6 +58,8 @@ class IntrospectMixin:
             self.send_telegram_msg(f"🧬 **진화 시도!**\n**의도:** {intent}")
 
             applied = []
+            error_memory = get_error_memory()
+            
             for up in updates:
                 filename, code = up.get("filename"), up.get("code")
                 valid, reason = self.overseer.validate_code(code, filename)
@@ -64,10 +67,17 @@ class IntrospectMixin:
                     success, msg = self.overseer.apply_evolution(filename, code)
                     if success:
                         applied.append(filename)
+                        # 🧠 성공 시 해당 파일의 오류 기록 삭제
+                        error_memory.clear_file(filename)
                     else:
                         self.send_telegram_msg(f"❌ **반영 실패 ({filename}):** {msg}")
+                        # 🧠 실패 기억에 기록
+                        error_memory.record_error(filename, "apply_failed", msg[:100])
                 else:
                     self.send_telegram_msg(f"❌ **검증 실패 ({filename}):** {reason}")
+                    # 🧠 검증 실패 기억에 기록
+                    error_type = "syntax_error" if "Syntax Error" in reason else "validation_failed"
+                    error_memory.record_error(filename, error_type, reason[:100])
 
             if applied:
                 self.send_telegram_msg(f"🧪 자가 검증 시작... (적용됨: {', '.join(applied)})")
