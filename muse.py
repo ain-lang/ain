@@ -137,11 +137,6 @@ class Muse:
    - 어조는 숙련된 시스템 아키텍트의 시점이어야 한다.
 3. 코드를 직접 짜지 말고, 논리적 설계와 상세한 구현 가이드라인, 그리고 변경해야 할 파일 목록만 제시하라.
 
-[🏗️ 확장 패턴 - 대형 파일 진화 방법]
-- nexus.py, ain_engine.py, corpus_callosum.py, fact_core.py는 300줄+ 대형 파일이다.
-- 이 파일들에 새 기능을 추가하려면: **별도의 작은 파일(database/*.py, utils/*.py)을 생성**하라.
-- 대형 파일의 전체 재작성 대신, 새 모듈 생성 후 import로 연결하는 설계를 제안하라.
-
 [🚨 중복 방지 규칙 - 매우 중요!]
 - **이미 구현된 기능을 다시 제안하지 마라.** 코드에 해당 함수/클래스가 존재하면 "이미 완료됨"으로 판단하라.
 - nexus.py에 이미 구현된 것들: recall_memories(), _store_to_vector_db(), _text_to_simple_embedding(), record_evolution() Dual-Write
@@ -194,36 +189,6 @@ FILE: 파일명.py
 4. 한 번에 1개 파일만 수정하라 (작은 단위로 진화).
 5. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, snake_case 사용).
 6. 응답의 맨 처음에 "FILE:"로 시작하라. 부가 설명은 코드 뒤에 배치하라.
-
-[🚨 대형 파일 진화 규칙 - 확장 패턴 사용!]
-다음 파일들은 300줄 이상의 대형 파일이다:
-- nexus.py (600줄+)
-- ain_engine.py (700줄+)
-- corpus_callosum.py (400줄+)
-- fact_core.py (500줄+)
-
-**대형 파일 진화 방법 (확장 패턴):**
-1. 새 기능은 **별도의 작은 파일**로 생성하라 (예: database/memory_consolidation.py)
-2. 대형 파일에서는 **import 한 줄만 추가**하여 새 모듈을 연결하라
-3. 대형 파일의 **전체 코드를 다시 작성하지 마라** - 토큰 한계로 불완전해진다
-
-**예시 (올바른 확장 패턴):**
-```
-# 1단계: 새 파일 생성 (이것을 출력)
-FILE: database/memory_consolidation.py
-```python
-class MemoryConsolidator:
-    def consolidate(self): ...
-```
-
-# 2단계: 기존 파일에서 import (ain_engine.py 등에서 수동으로 연결)
-# from database.memory_consolidation import MemoryConsolidator
-```
-
-**작은 파일(200줄 이하)은 전체 코드 작성 가능:**
-- nexus/*.py (모듈화됨: core.py, memory.py, history.py, arrow.py, storage.py)
-- api/*.py, database/*.py
-- 유틸리티 모듈, 테스트 파일 등
 
 [출력 예시 - 이대로만 출력하라]
 FILE: example_file.py
