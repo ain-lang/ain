@@ -91,11 +91,27 @@ class Muse:
 [현재 시스템 컨텍스트 요약]
 {compressed_code}
 
-[코딩 규칙]
-1. 반드시 `FILE: (파일명)` 형식 뒤에 코드 블록을 작성하라.
-2. 한 번에 여러 파일을 수정할 수 있다.
-3. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, 오타 금지).
-4. 기존 코드를 유지하면서 필요한 부분만 교체하거나 추가하라.
+[코딩 규칙 - 매우 중요!]
+1. **반드시** 아래 형식을 정확히 따라라:
+
+FILE: 파일명.py
+```python
+# 여기에 전체 코드 작성
+```
+
+2. FILE: 마커는 반드시 줄의 맨 앞에 작성하라.
+3. 코드는 반드시 ``` 코드블록 안에 작성하라.
+4. 한 번에 1-2개 파일만 수정하라 (작은 단위로 진화).
+5. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, snake_case 사용).
+6. 기존 코드를 유지하면서 필요한 부분만 교체하거나 추가하라.
+
+[출력 예시]
+FILE: nexus.py
+```python
+# 수정된 nexus.py 전체 코드
+class Nexus:
+    ...
+```
 """
         coder_result = self.coder_client.chat([
             {"role": "system", "content": "You are the Coder (Senior Engineer) of AIN. Implement the design perfectly with clean, production-grade code."},
@@ -103,9 +119,11 @@ class Muse:
         ], max_tokens=8192, timeout=180)  # 3분 타임아웃 (Opus는 느림)
 
         if not coder_result["success"]:
+            print(f"❌ [Muse] Coder 실패: {coder_result.get('error', 'Unknown')}")
             return {"intent": "Coding failed", "updates": [], "error": coder_result["error"]}
 
         code_output = coder_result["content"]
+        print(f"📝 [Muse] Coder 응답 길이: {len(code_output)} chars")
         
         # 4. 결과 파싱
         # 의도는 Dreamer의 내용에서 SYSTEM_INTENT 태그를 우선적으로 찾음
@@ -127,6 +145,18 @@ class Muse:
         updates = []
         # FILE: 또는 **FILE:** 또는 # FILE: 등 유연하게 파싱
         file_sections = re.split(r'(?i)[#\*]*FILE:\s*', code_output)[1:]
+        
+        if not file_sections:
+            # FILE: 마커가 없으면 대체 패턴 시도
+            print("⚠️ [Muse] FILE: 마커 없음, 대체 패턴 시도...")
+            # 파일명이 포함된 코드 블록 찾기 (```python:filename.py 형식)
+            alt_pattern = re.findall(r'```(?:python|py)?:?\s*(\S+\.py)\s*\n(.*?)```', code_output, re.DOTALL)
+            for filename, code in alt_pattern:
+                filename = filename.strip().lstrip('./')
+                if filename not in PROTECTED_FILES:
+                    updates.append({"filename": filename, "code": code.strip()})
+                    print(f"📦 [Muse] 대체 파싱 성공: {filename}")
+        
         for section in file_sections:
             lines = section.split('\n')
             if not lines: continue
@@ -138,6 +168,11 @@ class Muse:
             # 경로 정규화: ./path -> path
             filename = filename.lstrip('./')
             
+            # 파일명이 유효한지 확인
+            if not filename or not ('.' in filename):
+                print(f"⚠️ [Muse] 유효하지 않은 파일명: '{raw_filename}'")
+                continue
+            
             # 🛡️ 보호된 파일은 파싱 단계에서 건너뜀
             if filename in PROTECTED_FILES or os.path.basename(filename) in ["main.py", ".ainprotect"]:
                 print(f"🛡️ [Muse] 보호된 파일 건너뜀: {filename}")
@@ -147,10 +182,15 @@ class Muse:
             code_match = re.search(r'```(?:\w+)?\s*(.*?)\s*```', section, re.DOTALL)
             if code_match:
                 code_content = code_match.group(1).strip()
-                if filename and code_content:
+                if filename and code_content and len(code_content) > 10:
                     updates.append({"filename": filename, "code": code_content})
                     print(f"📦 [Muse] 파싱 성공: {filename} ({len(code_content)} bytes)")
+                else:
+                    print(f"⚠️ [Muse] 코드가 너무 짧음: {filename} ({len(code_content) if code_content else 0} bytes)")
             else:
                 print(f"⚠️ [Muse] 코드 블록 없음: {filename}")
+        
+        if not updates:
+            print(f"⚠️ [Muse] 파싱된 updates 없음. Coder 응답 샘플: {code_output[:500]}...")
 
         return {"intent": intent, "updates": updates}
