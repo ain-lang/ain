@@ -239,12 +239,33 @@ import ...
                 code_output = code_output.replace("'''", "```")
                 print("🔄 [Muse] '''를 ```로 자동 치환함")
             
-            # 🚨 Git 충돌 마커 감지
-            has_conflict = any(marker in code_output for marker in ['<<<<<<<', '=======', '>>>>>>>'])
+            # 🔧 Git 충돌 마커 자동 제거 (후처리)
+            conflict_markers = ['<<<<<<<', '=======', '>>>>>>>', 'HEAD', '<<<<<<< HEAD']
+            lines = code_output.split('\n')
+            cleaned_lines = []
+            in_conflict_block = False
+            for line in lines:
+                # 충돌 시작/끝 마커 건너뛰기
+                if line.strip().startswith('<<<<<<<') or line.strip().startswith('>>>>>>>'):
+                    in_conflict_block = not in_conflict_block if line.strip().startswith('<<<<<<<') else False
+                    print(f"🔧 [Muse] 충돌 마커 제거: {line[:30]}...")
+                    continue
+                # ======= 구분선 건너뛰기
+                if line.strip() == '=======' or line.strip().startswith('======='):
+                    print(f"🔧 [Muse] 충돌 구분선 제거")
+                    continue
+                cleaned_lines.append(line)
+            
+            if len(cleaned_lines) != len(lines):
+                code_output = '\n'.join(cleaned_lines)
+                print(f"🔧 [Muse] 충돌 마커 제거 완료: {len(lines)} -> {len(cleaned_lines)} 줄")
+            
+            # 🚨 Git 충돌 마커 감지 (제거 후에도 남아있는지 확인)
+            has_conflict = any(marker in code_output for marker in ['<<<<<<<', '>>>>>>>'])
             
             # 🚨 Diff 형식 감지 (+ 또는 -로 시작하는 줄, @@ 마커)
-            lines = code_output.split('\n')
-            diff_indicators = [l for l in lines if l.strip().startswith('+ ') or l.strip().startswith('- ')]
+            current_lines = code_output.split('\n')
+            diff_indicators = [l for l in current_lines if l.strip().startswith('+ ') or l.strip().startswith('- ')]
             is_diff_format = len(diff_indicators) > 3 or '@@ ' in code_output
             
             # 🚨 내용 생략 감지 (더 구체적인 패턴만)
