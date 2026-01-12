@@ -9,10 +9,7 @@ AINCore를 모듈화하여 분리한 패키지
 - evolution.py: 진화 로직
 - handlers.py: 명령어 처리
 - introspect.py: 자기 성찰 (Legacy)
-<<<<<<< HEAD
-=======
 - consolidation.py: 기억 응고화 (Step 5)
->>>>>>> 5582568 (🧬 Evolution: System Evolution (empty response))
 - loop.py: 메인 루프
 """
 
@@ -21,10 +18,7 @@ from .sync import SyncMixin
 from .evolution import EvolutionMixin
 from .handlers import HandlersMixin
 from .introspect import IntrospectMixin
-<<<<<<< HEAD
-=======
 from .consolidation import MemoryConsolidator, get_consolidator
->>>>>>> 5582568 (🧬 Evolution: System Evolution (empty response))
 from .loop import run_engine
 
 
@@ -37,9 +31,6 @@ class AINCore(_AINCore, SyncMixin, EvolutionMixin, HandlersMixin, IntrospectMixi
     pass
 
 
-<<<<<<< HEAD
-__all__ = ['AINCore', 'run_engine', 'DREAMER_MODEL', 'CODER_MODEL', 'DEFAULT_INTERVAL']
-=======
 __all__ = [
     'AINCore', 
     'run_engine', 
@@ -49,4 +40,3 @@ __all__ = [
     'MemoryConsolidator',
     'get_consolidator'
 ]
->>>>>>> 5582568 (🧬 Evolution: System Evolution (empty response))
