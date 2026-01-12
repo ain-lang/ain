@@ -146,7 +146,7 @@ class Muse:
 - 새 기능은 별도 파일로 생성 (utils/*.py 등)
 
 [🚫 대형 파일 수정 금지 - 중요!]
-- nexus.py, overseer.py, muse.py 등 200줄 이상의 파일은 절대 직접 수정하지 마라!
+- overseer.py, muse.py 등 200줄 이상의 파일은 절대 직접 수정하지 마라!
 - 대형 파일 수정 시 토큰 한계로 코드가 잘려서 오류가 발생한다.
 - 대신: 새로운 모듈 파일(engine/xxx.py, utils/xxx.py)을 만들고, 대형 파일에서는 import만 추가하라.
 - 예시: nexus.py에 기능 추가 → nexus_helper.py 또는 utils/memory.py 생성 → nexus.py에서 import
@@ -175,7 +175,8 @@ class Muse:
         # 경로 포함된 파일명 추출 (예: engine/core.py, facts/node.py)
         # 🚫 대형 파일(200줄 이상)은 제외
         LARGE_FILE_THRESHOLD = 200
-        LARGE_FILES = {'nexus.py', 'overseer.py', 'muse.py', 'corpus_callosum.py', 'fact_core.py'}
+        # 실제 대형 파일만 (nexus, corpus_callosum, fact_core는 이미 분리 완료)
+        LARGE_FILES = {'overseer.py', 'muse.py'}
         
         target_files = re.findall(r'([a-zA-Z0-9_\-/]+\.py)', intent_design)
         target_files_content = ""
@@ -218,7 +219,7 @@ class Muse:
 1. **전체 코드 출력**: 파일의 일부분이나 수정된 내용(diff)만 출력하는 것은 절대 금지된다. 반드시 `import`부터 끝까지 전체 코드를 작성하라.
 2. **마커 준수**: 파일 하나당 하나의 `FILE: 파일명.py` 마커와 하나의 코드 블록(```python ... ```)만 사용하라.
 3. **금지 기호**: `+`, `-`, `<<<<<<<`, `=======`, `>>>>>>>` 등 diff나 충돌 마커는 절대 포함하지 마라.
-4. **대형 파일 수정 금지**: nexus.py, overseer.py, muse.py 등 200줄 이상 파일은 절대 출력하지 마라. 새 모듈 파일만 생성하라.
+4. **대형 파일 수정 금지**: overseer.py, muse.py 등 200줄 이상 파일은 절대 출력하지 마라. 새 모듈 파일만 생성하라.
 4. **생략 금지**: `# ...` 이나 `(기존 코드 생략)` 같은 표현은 절대 사용하지 마라.
 
 [출력 규격]

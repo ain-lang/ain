@@ -179,11 +179,11 @@ class Overseer:
                     return False, f"필수 패키지 '{pkg}'가 requirements.txt에서 누락되었습니다."
             return True, "requirements.txt validation OK"
         
-        elif filename == "nexus.py":
-            # 핵심 클래스 삭제 방지
+        elif filename == "nexus/core.py":
+            # 모듈화된 Nexus 핵심 클래스 보호
             if "class Nexus" not in code:
-                return False, "핵심 클래스 'Nexus'가 nexus.py에서 누락되었습니다. 파괴적 수정을 거부합니다."
-            return True, "nexus.py validation OK"
+                return False, "핵심 클래스 'Nexus'가 nexus/core.py에서 누락되었습니다."
+            return True, "nexus/core.py validation OK"
 
         elif filename.endswith(".md") or filename.endswith(".txt") or filename.endswith(".toml"):
             return True, "Text/Config skip validation"
