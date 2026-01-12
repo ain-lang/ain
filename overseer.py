@@ -142,8 +142,26 @@ class Overseer:
         코드의 구문을 검사한다.
         
         🛡️ 보호된 파일은 검증 단계에서 즉시 거부
+        🚨 Git 충돌 마커 감지 시 즉시 거부
+        🚨 잘못된 파일명 패턴 감지 시 즉시 거부
         """
-        # 🛡️ 1차 방어: 보호된 파일 체크 (apply_evolution 전에 미리 차단)
+        # 🚨 0차 방어: 잘못된 파일명 패턴 차단
+        invalid_filename_chars = ['<', '>', '|', '"', '?', '*', '\\s', '\\S', '\\d']
+        for char in invalid_filename_chars:
+            if char in filename:
+                return False, f"🚨 잘못된 파일명: '{filename}' (특수문자 '{char}' 포함)"
+        
+        # 파일명 길이 제한 (정규식 패턴이 파일명으로 들어오는 것 방지)
+        if len(filename) > 100:
+            return False, f"🚨 파일명이 너무 깁니다: {len(filename)}자 (최대 100자)"
+        
+        # 🚨 1차 방어: Git 충돌 마커 검사 (매우 중요!)
+        git_conflict_markers = ['<<<<<<<', '=======', '>>>>>>>']
+        for marker in git_conflict_markers:
+            if marker in code:
+                return False, f"🚨 Git 충돌 마커 감지: '{marker}' - 코드에 충돌이 있습니다!"
+        
+        # 🛡️ 2차 방어: 보호된 파일 체크 (apply_evolution 전에 미리 차단)
         if self.is_protected(filename):
             return False, f"🛡️ '{filename}'은(는) 보호된 파일입니다. 수정이 금지되어 있습니다."
         
