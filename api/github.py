@@ -22,17 +22,19 @@ class GitHubClient:
             self.github = None
             self.repo = None
     
-    def commit_and_push(self, message: str, branch: str = "main") -> tuple[bool, str, str | None]:
+    def commit_and_push(self, message: str, branch: str = "main") -> tuple[bool, str, str | None, dict]:
         """
         변경사항 커밋 및 푸시
         
         Returns:
-            (success: bool, message: str, commit_sha: str | None)
+            (success: bool, message: str, commit_sha: str | None, debug_info: dict)
         """
         import shutil
         git_path = shutil.which("git")
         if not git_path:
-            return False, "❌ 서버 환경에 'git'이 설치되어 있지 않습니다. Railway 설정을 확인해주세요.", None
+            return False, "❌ git 미설치", None, {}
+        
+        debug = {"stages": [], "diff_stat": "", "changed_files": 0}
 
         try:
             # 1. 안전한 디렉토리 설정 (Docker/Railway 환경 대응 핵심!)
@@ -71,6 +73,15 @@ class GitHubClient:
             
             subprocess.run([git_path, "add", "."], check=True)
             
+            # 📊 변경사항 확인 (디버그용)
+            diff_result = subprocess.run(
+                [git_path, "diff", "--cached", "--stat"],
+                capture_output=True, text=True
+            )
+            debug["diff_stat"] = diff_result.stdout.strip()[:500] if diff_result.stdout else "(no changes)"
+            debug["changed_files"] = diff_result.stdout.count('\n') if diff_result.stdout else 0
+            debug["stages"].append(f"diff: {debug['changed_files']} files")
+            
             # 커밋 전 HEAD SHA 저장 (실패 시 빈 문자열)
             try:
                 old_sha = subprocess.run(
@@ -87,7 +98,8 @@ class GitHubClient:
             )
             
             if "nothing to commit" in result.stdout or "nothing to commit" in result.stderr:
-                return True, "변경사항 없음 (이미 최신 상태입니다)", None
+                debug["stages"].append("nothing to commit")
+                return True, "변경사항 없음 (이미 최신 상태입니다)", None, debug
             
             # 커밋 후 HEAD SHA 확인 (실패 시 빈 문자열)
             try:
@@ -100,13 +112,14 @@ class GitHubClient:
             
             # 🚨 커밋이 실제로 생성되었는지 확인
             if old_sha and new_sha and old_sha == new_sha:
-                print(f"⚠️ 커밋이 생성되지 않음 (SHA 변경 없음)")
-                print(f"   stdout: {result.stdout[:200]}")
-                print(f"   stderr: {result.stderr[:200]}")
-                return True, "변경사항 없음 (커밋 생성 안됨)", None
+                debug["stages"].append("commit: SHA unchanged")
+                debug["commit_stdout"] = result.stdout[:200]
+                debug["commit_stderr"] = result.stderr[:200]
+                return True, "변경사항 없음 (커밋 생성 안됨)", None, debug
             
             if new_sha:
                 print(f"✅ 새 커밋 생성됨: {new_sha[:8]}")
+                debug["stages"].append(f"commit: {new_sha[:8]}")
             print(f"🚀 GitHub로 푸시 시도 중: {self.repo_name} (branch: {branch})")
             
             # 6. 일반 푸시 (--force 제거! 히스토리 보존)
@@ -143,9 +156,12 @@ class GitHubClient:
                 
                 if remote_head and new_sha and remote_head != new_sha:
                     print(f"⚠️ 원격 HEAD({remote_head[:8]})와 로컬({new_sha[:8]})이 다름!")
-                    # 원격 HEAD가 다르면 푸시가 실제로 안 된 것
-                    return True, "변경사항 없음 (푸시 미반영)", None
+                    debug["stages"].append(f"push: remote mismatch ({remote_head[:8]} != {new_sha[:8]})")
+                    debug["remote_head"] = remote_head
+                    debug["local_head"] = new_sha
+                    return True, "변경사항 없음 (푸시 미반영)", None, debug
                 print(f"✅ 원격 HEAD 확인: {remote_head[:8] if remote_head else 'N/A'}")
+                debug["stages"].append(f"push: verified ({remote_head[:8] if remote_head else 'N/A'})")
             except Exception as verify_err:
                 print(f"⚠️ 원격 확인 실패: {verify_err}")
 
@@ -159,10 +175,12 @@ class GitHubClient:
                 except:
                     new_sha = None
             
-            return True, "✅ 동기화 성공 (Push 완료)", new_sha
+            debug["stages"].append("success")
+            return True, "✅ 동기화 성공 (Push 완료)", new_sha, debug
             
         except Exception as e:
-            return False, f"❌ Git Push 실패: {str(e)}", None
+            debug["stages"].append(f"error: {str(e)[:50]}")
+            return False, f"❌ Git Push 실패: {str(e)}", None, debug
     
     def get_commit_url(self, sha: str) -> str:
         """커밋 URL 생성"""

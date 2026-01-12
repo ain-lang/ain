@@ -125,18 +125,24 @@ class IntrospectMixin:
 
                 try:
                     safe_intent = intent[:100].replace('`', "'").replace('\n', ' ')
-                    push_ok, push_msg, sha = self.github.commit_and_push(f"Evolution: {safe_intent}")
-                    print(f"[DEBUG] Push result: ok={push_ok}, sha={sha}")
+                    push_ok, push_msg, sha, debug = self.github.commit_and_push(f"Evolution: {safe_intent}")
+                    print(f"[DEBUG] Push result: ok={push_ok}, sha={sha}, debug={debug}")
                     
                     if push_ok:
                         if sha:
                             commit_url = self.github.get_commit_url(sha)
-                            self.send_telegram_msg(f"🛠️ 진화 완료! ({', '.join(applied)})\n{commit_url}")
+                            # 📊 디버그 정보 포함
+                            debug_str = f"\n📊 {debug.get('changed_files', 0)} files | {' → '.join(debug.get('stages', []))}"
+                            self.send_telegram_msg(f"🛠️ 진화 완료! ({', '.join(applied)}){debug_str}\n{commit_url}")
                         else:
-                            self.send_telegram_msg(f"✨ 진화 완료! ({', '.join(applied)}) - 변경사항 없음")
+                            # ⚠️ 변경사항 없음 - 원인 표시
+                            debug_str = f"\n📊 diff: {debug.get('diff_stat', 'N/A')[:100]}"
+                            stages = ' → '.join(debug.get('stages', []))
+                            self.send_telegram_msg(f"✨ 진화 완료! ({', '.join(applied)}) - 변경사항 없음\n📊 {stages}{debug_str}")
                     else:
                         safe_push_msg = push_msg.replace('`', "'").replace('*', '')[:150]
-                        self.send_telegram_msg(f"⚠️ 로컬 반영됨, 푸시 실패: {safe_push_msg}")
+                        stages = ' → '.join(debug.get('stages', []))
+                        self.send_telegram_msg(f"⚠️ 로컬 반영됨, 푸시 실패: {safe_push_msg}\n📊 {stages}")
                 except Exception as push_err:
                     safe_err = str(push_err).replace('`', "'").replace('*', '')[:100]
                     self.send_telegram_msg(f"⚠️ 커밋/푸시 오류: {safe_err}")

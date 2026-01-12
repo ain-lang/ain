@@ -116,7 +116,19 @@ class Overseer:
         try:
             with open(target_path, "w", encoding="utf-8") as f:
                 f.write(code)
-            return True, f"'{filename}' 진화 완료 및 백업 생성됨."
+            
+            # 🔍 저장 후 검증: 파일이 실제로 저장되었는지 확인
+            if not os.path.exists(target_path):
+                return False, f"파일 저장 실패: {filename} 생성되지 않음"
+            
+            with open(target_path, "r", encoding="utf-8") as f:
+                saved_content = f.read()
+            
+            if len(saved_content) != len(code):
+                return False, f"파일 저장 검증 실패: 크기 불일치 ({len(saved_content)} vs {len(code)})"
+            
+            print(f"✅ [Overseer] {filename} 저장 검증 완료 ({len(code)} bytes)")
+            return True, f"'{filename}' 진화 완료 및 백업 생성됨. ({len(code)} bytes)"
         except Exception as e:
             return False, f"파일 기록 중 오류 발생: {str(e)}"
 
