@@ -29,28 +29,75 @@ class GraphMixin:
         return view
     
     def get_formatted_roadmap(self):
-        """로드맵 상태를 보기 좋게 반환"""
-        roadmap = self.facts.get('roadmap', {}).get('phase_1_mvp', {})
-        current = self.facts.get('roadmap', {}).get('current_focus', '')
+        """로드맵 상태를 보기 좋게 반환 (Phase 1-5, Step 1-15)"""
+        roadmap = self.facts.get('roadmap', {})
+        current = roadmap.get('current_focus', '')
         
-        display = "\n🗺️ **AIN Evolution Roadmap (Phase 1)**\n"
+        phase_names = {
+            1: "🏗️ Infrastructure",
+            2: "🧠 Memory",
+            3: "🌅 Awakening",
+            4: "💫 Consciousness",
+            5: "🚀 Transcendence"
+        }
+        
+        # Phase별로 그룹화
+        phases = {1: [], 2: [], 3: [], 4: [], 5: []}
+        for key, info in roadmap.items():
+            if key.startswith('step_') and isinstance(info, dict):
+                phase = info.get('phase', 1)
+                phases[phase].append((key, info))
+        
+        display = "\n🗺️ **AIN Evolution Roadmap**\n"
         display += "="*40 + "\n"
         
-        steps = sorted(roadmap.keys())
-        for step in steps:
-            info = roadmap[step]
-            status = info['status']
-            desc = info['desc']
+        for phase_num in range(1, 6):
+            steps = sorted(phases[phase_num], key=lambda x: int(x[0].split('_')[1]))
+            if not steps:
+                continue
             
-            icon = "⬜"
-            if status == "completed": icon = "✅"
-            elif status == "in_progress": icon = "🔥"
+            display += f"\n**{phase_names[phase_num]}**\n"
             
-            highlight = "👈 CURRENT FOCUS" if step == current else ""
-            display += f"{icon} **{step.replace('_', ' ').upper()}**\n   └─ {desc} {highlight}\n"
-            
-        display += "="*40 + "\n"
+            for step_key, info in steps:
+                status = info.get('status', 'pending')
+                name = info.get('name', step_key)
+                
+                icon = "⏳"
+                if status == "completed": icon = "✅"
+                elif status == "in_progress": icon = "🔥"
+                
+                step_num = step_key.split('_')[1]
+                current_mark = " 👈" if step_key == current else ""
+                display += f"{icon} Step {step_num}: {name}{current_mark}\n"
+        
+        display += "\n" + "="*40
         return display
+    
+    def update_step_status(self, step_num: int, status: str):
+        """
+        Step 상태 업데이트
+        
+        Args:
+            step_num: Step 번호 (1-15)
+            status: 'pending', 'in_progress', 'completed'
+        """
+        step_key = f"step_{step_num}"
+        if step_key in self.facts.get('roadmap', {}):
+            self.facts['roadmap'][step_key]['status'] = status
+            
+            # in_progress로 변경 시 current_focus도 업데이트
+            if status == 'in_progress':
+                self.facts['roadmap']['current_focus'] = step_key
+            
+            self.save_facts()
+            print(f"🗺️ Step {step_num} 상태 변경: {status}")
+            return True
+        return False
+    
+    def get_current_step(self) -> dict:
+        """현재 진행 중인 Step 정보 반환"""
+        current = self.facts.get('roadmap', {}).get('current_focus', 'step_4')
+        return self.facts.get('roadmap', {}).get(current, {})
 
     def get_core_context(self):
         """컨텍스트 반환"""

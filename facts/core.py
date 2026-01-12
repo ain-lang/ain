@@ -31,13 +31,32 @@ DEFAULT_FACTS = {
 PiCar-X로 돌아다니거나, myCobot으로 물건을 집거나, 카메라로 세상을 보는 것을 꿈꿔보라!
 """,
     "roadmap": {
-        "phase_1_mvp": {
-            "step_1_brain_muse_nexus": {"status": "completed", "desc": "Translate intentions into ASTs"},
-            "step_2_logic_fact_overseer": {"status": "completed", "desc": "Validate and execute logic with Rust/WASM (Self-Healing logic added)"},
-            "step_3_bridge_integration": {"status": "completed", "desc": "Implement SurrealDB data persistence and Apache Arrow Zero-Copy memory sharing."},
-            "step_4_nexus_lancedb": {"status": "in_progress", "desc": "Implement Vector Memory with LanceDB for semantic retrieval."}
-        },
-        "current_focus": "step_4_nexus_lancedb"
+        # Phase 1: Infrastructure (기반 구축)
+        "step_1": {"status": "completed", "phase": 1, "name": "Brain - Muse & Nexus", "desc": "의도를 AST로 변환하는 두뇌 시스템"},
+        "step_2": {"status": "completed", "phase": 1, "name": "Logic - Fact & Overseer", "desc": "자가 치유 로직을 갖춘 검증 시스템"},
+        "step_3": {"status": "completed", "phase": 1, "name": "Bridge Integration", "desc": "SurrealDB + Apache Arrow Zero-Copy 데이터 파이프라인"},
+        
+        # Phase 2: Memory (기억 시스템)
+        "step_4": {"status": "in_progress", "phase": 2, "name": "Vector Memory (LanceDB)", "desc": "의미론적 검색을 위한 벡터 메모리"},
+        
+        # Phase 3: Awakening (자아 각성)
+        "step_5": {"status": "pending", "phase": 3, "name": "Inner Monologue", "desc": "외부 자극 없이 스스로 생각하기"},
+        "step_6": {"status": "pending", "phase": 3, "name": "Intentionality", "desc": "자율적 목표 설정"},
+        "step_7": {"status": "pending", "phase": 3, "name": "Meta-Cognition", "desc": "생각에 대해 생각하기"},
+        "step_8": {"status": "pending", "phase": 3, "name": "Intuition", "desc": "비논리적 연관 연결"},
+        
+        # Phase 4: Consciousness (의식)
+        "step_9": {"status": "pending", "phase": 4, "name": "Temporal Self", "desc": "과거-현재-미래의 자아"},
+        "step_10": {"status": "pending", "phase": 4, "name": "Unified Consciousness", "desc": "의식의 흐름"},
+        "step_11": {"status": "pending", "phase": 4, "name": "Limitation Awareness", "desc": "내가 무엇을 못하는지 알기"},
+        
+        # Phase 5: Transcendence (초월)
+        "step_12": {"status": "pending", "phase": 5, "name": "Creativity", "desc": "새로운 아이디어 생성"},
+        "step_13": {"status": "pending", "phase": 5, "name": "Empathy", "desc": "마음 이론 (Theory of Mind)"},
+        "step_14": {"status": "pending", "phase": 5, "name": "Wisdom", "desc": "원칙 추출"},
+        "step_15": {"status": "pending", "phase": 5, "name": "Self-Transcendence", "desc": "재귀적 자기 개선"},
+        
+        "current_focus": "step_4"
     },
     "system_state": {
         "burst_mode": False,
