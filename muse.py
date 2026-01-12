@@ -38,14 +38,30 @@ class Muse:
             compressed += f"\n--- FILE: {filename} ---\n{content[:limit]}\n"
         return compressed
 
+    def _get_current_roadmap_step(self):
+        """ROADMAP.md에서 현재 진행 중인 Step(🔥)을 동적으로 읽어옴"""
+        try:
+            with open("ROADMAP.md", "r", encoding="utf-8") as f:
+                content = f.read()
+            # 🔥 마커가 있는 줄을 찾음
+            for line in content.split("\n"):
+                if "🔥" in line:
+                    return line.strip()
+            return "다음 진화 단계 탐색 중"
+        except:
+            return "Step 5: Memory Consolidation"
+
     def imagine(self, system_context, user_query=None, evolution_history=None, error_context=None):
         """[Muse] Dreamer와 Coder의 협업을 통해 진화를 상상함"""
         
         # 1. 컨텍스트 압축
         compressed_code = self._compress_context(system_context)
         
+        # 1.5 현재 로드맵 단계 동적 파악
+        current_step = self._get_current_roadmap_step()
+        
         # 2. [Dreamer - Gemini 3 Pro] 전략 및 의도 수립
-        print(f"🧠 Dreamer가 진화 방향을 구상 중...")
+        print(f"🧠 Dreamer가 진화 방향을 구상 중... ({current_step})")
         
         # Lessons Learned 요약 (별도 호출 없이 컨텍스트에서 추출 유도)
         dream_prompt = f"""
@@ -54,12 +70,21 @@ class Muse:
 [현재 시스템 상태 및 코드]
 {compressed_code}
 
+[현재 로드맵 단계]
+{current_step}
+
 [미션]
-1. 위 코드와 'Lessons Learned'를 분석하여 현재 작업(Step 3: Bridge Integration)의 성숙도를 평가하라.
+1. 위 코드를 분석하여 **현재 로드맵 단계**의 성숙도를 평가하라.
 2. 다음 진화 단계를 위해 무엇을 '수정'하거나 '추가'할지 구체적이고 기술적인 '의도(Intent)'를 설계하라. 
-   - **의도 작성법**: 현재 어떤 컴포넌트(파일명 언급)가 확보되었는지, 하지만 무엇(유기적 결합, 실전 파이프라인 등)이 부족한지, 그래서 이번에 어떤 핵심 엔진이나 로직을 구현하여 어떤 목표(Step 3 완성 등)를 달성할 것인지 아주 구체적이고 전문적으로 서술하라.
+   - **의도 작성법**: 현재 어떤 컴포넌트(파일명 언급)가 확보되었는지, 하지만 무엇(유기적 결합, 실전 파이프라인 등)이 부족한지, 그래서 이번에 어떤 핵심 엔진이나 로직을 구현하여 어떤 목표를 달성할 것인지 아주 구체적이고 전문적으로 서술하라.
    - 어조는 숙련된 시스템 아키텍트의 시점이어야 한다.
 3. 코드를 직접 짜지 말고, 논리적 설계와 상세한 구현 가이드라인, 그리고 변경해야 할 파일 목록만 제시하라.
+
+[🚨 중복 방지 규칙 - 매우 중요!]
+- **이미 구현된 기능을 다시 제안하지 마라.** 코드에 해당 함수/클래스가 존재하면 "이미 완료됨"으로 판단하라.
+- nexus.py에 이미 구현된 것들: recall_memories(), _store_to_vector_db(), _text_to_simple_embedding(), record_evolution() Dual-Write
+- database/lance_bridge.py에 이미 구현된 것들: LanceBridge 클래스, add_memory(), search_memory()
+- **같은 파일에 같은 기능을 반복 구현하지 마라.** 새로운 기능이나 다른 파일로 확장하라.
 
 [출력 규칙]
 - 반드시 첫 줄에 `SYSTEM_INTENT: (여기에 위의 규칙에 따른 상세한 진화 의도를 작성)`을 작성하라.
