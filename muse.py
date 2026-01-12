@@ -125,6 +125,11 @@ import os
         code_output = coder_result["content"]
         print(f"📝 [Muse] Coder 응답 길이: {len(code_output)} chars")
         
+        # 🔧 전처리: Claude가 간혹 백틱(```) 대신 작은따옴표 세 개(''')를 쓰는 경우 자동 치환
+        if "'''" in code_output:
+            code_output = code_output.replace("'''", "```")
+            print("🔄 [Muse] '''를 ```로 자동 치환함")
+        
         # 4. 결과 파싱
         # 의도는 Dreamer의 내용에서 SYSTEM_INTENT 태그를 우선적으로 찾음
         # 여러 줄에 걸친 의도도 캡처할 수 있도록 보강
