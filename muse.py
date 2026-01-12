@@ -165,7 +165,8 @@ class Muse:
 
         # 2.5 Coder를 위한 대상 파일 원본 추출
         # Dreamer가 제안한 파일들 중 기존에 존재하는 파일의 전체 내용을 가져옴
-        target_files = re.findall(r'(\w+[\w/\.]*\.py)', intent_design)
+        # 경로 포함된 파일명 추출 (예: engine/core.py, facts/node.py)
+        target_files = re.findall(r'([a-zA-Z0-9_\-/]+\.py)', intent_design)
         target_files_content = ""
         for tf in set(target_files):
             tf_path = tf.lstrip('./')
@@ -176,30 +177,34 @@ class Muse:
                 except: pass
 
         # 3. [Coder - Claude 4.5 Opus] 실제 코드 구현
-        print(f"💻 Coder (Claude 4.5 Opus)가 코드를 작성 중...")
+        print(f"💻 Coder (Claude 4.5 Opus)가 새로운 모듈을 생성 중...")
         coder_prompt = f"""
-너는 AIN의 최고 선임 개발자(Coder)다. 
-**중요: 너의 임무는 기존 파일을 새 버전으로 완전히 '교체(Overwrite)'하는 것이다.**
+너는 AIN의 '코드 생성기(Code Generator)'다. 
+**중요: 너는 기존 파일을 수정하는 것이 아니라, 완벽한 전체 코드를 처음부터 끝까지 새로 '작성'하는 역할이다.**
 
-[미션]
-1. 설계도(Dreamer's Intent)를 분석하여 코드를 작성하라.
-2. 수정이 필요한 파일의 경우, 아래 제공된 [원본 코드]를 참고하여 **파일 전체 내용을 처음부터 끝까지** 다시 작성하라.
-3. 절대 `+`, `-` 기호나 `<<<<<<<`, `=======` 같은 diff/충돌 마커를 사용하지 마라. 
-4. `# ... (기존 코드와 동일) ...` 처럼 생략하지 마라.
+[작성 규칙 - 위반 시 에러 발생]
+1. **전체 코드 출력**: 파일의 일부분이나 수정된 내용(diff)만 출력하는 것은 절대 금지된다. 반드시 `import`부터 끝까지 전체 코드를 작성하라.
+2. **마커 준수**: 파일 하나당 하나의 `FILE: 파일명.py` 마커와 하나의 코드 블록(```python ... ```)만 사용하라.
+3. **금지 기호**: `+`, `-`, `<<<<<<<`, `=======`, `>>>>>>>` 등 diff나 충돌 마커는 절대 포함하지 마라.
+4. **생략 금지**: `# ...` 이나 `(기존 코드 생략)` 같은 표현은 절대 사용하지 마라.
 
 [출력 규격]
 FILE: 파일명.py
 ```python
-# 여기에 파일 전체 내용을 작성 (생략 없이 처음부터 끝까지)
+# 파일 상단 주석 (목적 설명)
+import ...
+
+# 전체 구현부
+...
 ```
 
-[Dreamer's Intent]
+[설계도: Dreamer's Intent]
 {intent_design}
 
-[수정 대상 파일의 원본 코드 (참고용)]
-{target_files_content if target_files_content else "새로운 파일을 생성하는 단계입니다."}
+[참고용 기존 코드 (이 내용을 기반으로 전체를 새로 작성하라)]
+{target_files_content if target_files_content else "새로운 기능을 위한 모듈 생성 단계입니다."}
 
-[시스템 컨텍스트 요약]
+[시스템 컨텍스트 (참고용)]
 {compressed_code}
 """
         # 🔄 Coder 재시도 로직 (최대 3회)
@@ -217,7 +222,7 @@ FILE: 파일명.py
             
             print(f"💻 Coder 시도 {attempt}/{MAX_CODER_RETRIES}...")
             coder_result = self.coder_client.chat([
-                {"role": "system", "content": "You are the Coder (Senior Engineer) of AIN. Implement the design perfectly with clean, production-grade code."},
+                {"role": "system", "content": "You are a File Content Generator. You ALWAYS provide the full content of the file, never a diff or partial update. Your output must be ready to overwrite the existing file entirely."},
                 {"role": "user", "content": current_prompt}
             ], max_tokens=8192, timeout=180)
             
@@ -234,17 +239,15 @@ FILE: 파일명.py
                 code_output = code_output.replace("'''", "```")
                 print("🔄 [Muse] '''를 ```로 자동 치환함")
             
-            # 🚨 Git 충돌 마커 및 Diff 형식 검사
-            has_conflict = any(marker in code_output for marker in ['<<<<<<<', '=======', '>>>>>>>'])
-            # 행 시작이 + 또는 -로 시작하는 줄이 많은지 확인 (diff 형식 감지)
-            lines = code_output.split('\n')
-            diff_lines = [l for l in lines if l.startswith('+') or l.startswith('-')]
-            is_diff_format = len(diff_lines) > 5 # 단순히 한두 줄이 아니라 여러 줄이 diff 형식이면
-
-            if has_conflict or is_diff_format:
-                last_error = "Git 충돌 마커(<<<<<<<, =======, >>>>>>>) 또는 diff 형식(+/-)이 감지되었습니다. " \
-                             "일부분만 수정하는 diff 형식을 절대 사용하지 말고, 파일 전체 내용을 처음부터 끝까지 새로 작성하라."
-                print(f"🚨 [Muse] 부적절한 형식(Conflict/Diff) 감지! 재시도...")
+            # 🚨 내용 생략 감지 (# ... existing code ...)
+            omission_patterns = [r'#\s*\.\.\.', r'#\s*existing code', r'#\s*rest of', r'//\s*\.\.\.']
+            has_omission = any(re.search(p, code_output, re.I) for p in omission_patterns)
+            
+            if has_conflict or is_diff_format or has_omission:
+                last_error = "부적절한 형식(Conflict/Diff/Omission)이 감지되었습니다. " \
+                             "내용을 생략(# ...)하거나 diff 형식을 사용하지 마라. " \
+                             "반드시 파일 전체 내용을 처음부터 끝까지 새로 작성하라."
+                print(f"🚨 [Muse] 부적절한 형식(Conflict/Diff/Omission) 감지! 재시도...")
                 continue
             
             # 🚨 구문 검사 (Python 파일)
