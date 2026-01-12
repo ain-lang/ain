@@ -92,19 +92,20 @@ class Muse:
 {compressed_code}
 
 [코딩 규칙 - 매우 중요!]
-1. **반드시** 아래 형식을 정확히 따라라. 다른 설명은 생략하고 코드에 집중하라.
+1. **반드시** 아래 형식을 정확히 따라라. 설명 없이 코드만 출력하라.
 
 FILE: 파일명.py
 ```python
 # 여기에 전체 코드 작성 (일부 수정이 아닌 파일 전체 내용을 작성할 것)
 ```
 
-2. FILE: 마커는 반드시 줄의 맨 앞에 작성하라 (공백이나 기호 없이).
-3. 코드는 반드시 ``` 코드블록 안에 작성하라.
+2. "FILE:" 마커는 **반드시** 줄의 맨 앞에, 공백이나 기호 없이 작성하라.
+3. 코드 블록은 **반드시 백틱 세 개(```)로 감싸라**. 작은따옴표(''')는 절대 사용하지 마라.
 4. 한 번에 1-2개 파일만 수정하라 (작은 단위로 진화).
 5. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, snake_case 사용).
 6. 기존 코드를 유지하면서 필요한 부분만 교체하거나 추가하라.
 7. **특히 nexus.py를 수정할 때는 class Nexus와 기존 메서드들을 반드시 포함하라.**
+8. 응답의 맨 처음에 "FILE:"로 시작하라. 부가 설명은 코드 뒤에 배치하라.
 
 [출력 예시 - 이대로만 출력하라]
 FILE: example_file.py
@@ -210,12 +211,34 @@ import os
                 print(f"⚠️ [Muse] 코드 블록 없음: {filename}")
         
         if not updates:
-            sample = code_output[:200].replace('`', "'")
-            print(f"⚠️ [Muse] 파싱된 updates 없음. Coder 응답 샘플: {sample}...")
+            # 디버깅용: 백틱을 그대로 유지하여 실제 응답 형식 확인 가능
+            sample = code_output[:500]
+            print(f"⚠️ [Muse] 파싱된 updates 없음.")
+            print(f"📋 [Muse] Coder 응답 전체 길이: {len(code_output)} chars")
+            print(f"📋 [Muse] FILE: 마커 포함 여부: {'FILE:' in code_output or 'FILE ' in code_output}")
+            print(f"📋 [Muse] 코드블록 포함 여부: {'```' in code_output}")
+            
+            # 마지막 시도: 전체 응답에서 첫 번째 코드 블록만이라도 추출
+            last_resort = re.search(r'```(?:python|py)?\s*(.*?)```', code_output, re.DOTALL)
+            if last_resort and len(last_resort.group(1).strip()) > 100:
+                fallback_code = last_resort.group(1).strip()
+                # Dreamer의 의도에서 파일명 추론
+                file_hint = re.search(r'(?:수정|변경|업데이트|Update|Modify).*?[`\'"]([\w/]+\.py)[`\'"]', intent, re.IGNORECASE)
+                if file_hint:
+                    fallback_filename = file_hint.group(1)
+                else:
+                    fallback_filename = "nexus.py"  # 기본값
+                
+                print(f"🔄 [Muse] 마지막 시도: {fallback_filename}로 코드 추출 ({len(fallback_code)} bytes)")
+                updates.append({"filename": fallback_filename, "code": fallback_code})
+                return {"intent": intent, "updates": updates}
+            
+            # 디버깅용 샘플 (백틱 유지)
+            sample_display = sample.replace('`', '`')  # 그대로 유지
             return {
                 "intent": intent, 
                 "updates": [], 
-                "error": f"Coder가 규격에 맞는 코드를 생성하지 못했습니다.\n\n[응답 샘플]\n{sample}..."
+                "error": f"Coder가 규격에 맞는 코드를 생성하지 못했습니다.\n\n[응답 샘플 (처음 500자)]\n{sample_display}"
             }
 
         return {"intent": intent, "updates": updates}
