@@ -239,6 +239,14 @@ import ...
                 code_output = code_output.replace("'''", "```")
                 print("🔄 [Muse] '''를 ```로 자동 치환함")
             
+            # 🚨 Git 충돌 마커 감지
+            has_conflict = any(marker in code_output for marker in ['<<<<<<<', '=======', '>>>>>>>'])
+            
+            # 🚨 Diff 형식 감지 (+ 또는 -로 시작하는 줄, @@ 마커)
+            lines = code_output.split('\n')
+            diff_indicators = [l for l in lines if l.strip().startswith('+ ') or l.strip().startswith('- ')]
+            is_diff_format = len(diff_indicators) > 3 or '@@ ' in code_output
+            
             # 🚨 내용 생략 감지 (# ... existing code ...)
             omission_patterns = [r'#\s*\.\.\.', r'#\s*existing code', r'#\s*rest of', r'//\s*\.\.\.']
             has_omission = any(re.search(p, code_output, re.I) for p in omission_patterns)
