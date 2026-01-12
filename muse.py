@@ -230,22 +230,66 @@ def example_function(param: str) -> bool:
     return True
 ```
 """
-        coder_result = self.coder_client.chat([
-            {"role": "system", "content": "You are the Coder (Senior Engineer) of AIN. Implement the design perfectly with clean, production-grade code."},
-            {"role": "user", "content": coder_prompt}
-        ], max_tokens=8192, timeout=180)  # 3분 타임아웃 (Opus는 느림)
-
-        if not coder_result["success"]:
-            print(f"❌ [Muse] Coder 실패: {coder_result.get('error', 'Unknown')}")
-            return {"intent": "Coding failed", "updates": [], "error": coder_result["error"]}
-
-        code_output = coder_result["content"]
-        print(f"📝 [Muse] Coder 응답 길이: {len(code_output)} chars")
+        # 🔄 Coder 재시도 로직 (최대 3회)
+        MAX_CODER_RETRIES = 3
+        last_error = None
+        code_output = None
         
-        # 🔧 전처리: Claude가 간혹 백틱(```) 대신 작은따옴표 세 개(''')를 쓰는 경우 자동 치환
-        if "'''" in code_output:
-            code_output = code_output.replace("'''", "```")
-            print("🔄 [Muse] '''를 ```로 자동 치환함")
+        for attempt in range(1, MAX_CODER_RETRIES + 1):
+            # 이전 실패 원인을 프롬프트에 추가
+            retry_hint = ""
+            if last_error:
+                retry_hint = f"\n\n🚨 [이전 시도 실패 원인 - 반드시 수정!]\n{last_error}\n위 오류를 피해서 다시 작성하라."
+            
+            current_prompt = coder_prompt + retry_hint
+            
+            print(f"💻 Coder 시도 {attempt}/{MAX_CODER_RETRIES}...")
+            coder_result = self.coder_client.chat([
+                {"role": "system", "content": "You are the Coder (Senior Engineer) of AIN. Implement the design perfectly with clean, production-grade code."},
+                {"role": "user", "content": current_prompt}
+            ], max_tokens=8192, timeout=180)
+            
+            if not coder_result["success"]:
+                last_error = coder_result.get('error', 'API 호출 실패')
+                print(f"❌ [Muse] Coder API 실패 ({attempt}/{MAX_CODER_RETRIES}): {last_error}")
+                continue
+            
+            code_output = coder_result["content"]
+            print(f"📝 [Muse] Coder 응답 길이: {len(code_output)} chars")
+            
+            # 🔧 전처리
+            if "'''" in code_output:
+                code_output = code_output.replace("'''", "```")
+                print("🔄 [Muse] '''를 ```로 자동 치환함")
+            
+            # 🚨 Git 충돌 마커 검사
+            if '<<<<<<<' in code_output or '>>>>>>>' in code_output:
+                last_error = "Git 충돌 마커(<<<<<<<, >>>>>>>)가 코드에 포함됨. 이 마커들을 제거하고 깨끗한 코드만 작성하라."
+                print(f"🚨 [Muse] Git 충돌 마커 감지! 재시도...")
+                continue
+            
+            # 🚨 구문 검사 (Python 파일)
+            if 'FILE:' in code_output and '.py' in code_output:
+                try:
+                    # 코드 블록 추출 후 구문 검사
+                    code_match = re.search(r'```(?:python)?\n(.*?)```', code_output, re.DOTALL)
+                    if code_match:
+                        test_code = code_match.group(1)
+                        compile(test_code, '<coder_output>', 'exec')
+                except SyntaxError as e:
+                    last_error = f"Python 구문 오류: {e}. 올바른 Python 문법으로 다시 작성하라."
+                    print(f"🚨 [Muse] 구문 오류 감지! 재시도...")
+                    continue
+            
+            # 모든 검사 통과
+            break
+        else:
+            # 모든 재시도 실패
+            print(f"❌ [Muse] Coder {MAX_CODER_RETRIES}회 시도 모두 실패")
+            return {"intent": "Coding failed after retries", "updates": [], "error": last_error}
+        
+        if not code_output:
+            return {"intent": "Coding failed", "updates": [], "error": "No code output"}
         
         # 4. 결과 파싱 - 🔧 강화된 의도 추출
         intent = self._extract_intent(intent_design)
