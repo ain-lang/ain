@@ -143,18 +143,19 @@ class Muse:
 - database/lance_bridge.py에 이미 구현된 것들: LanceBridge 클래스, add_memory(), search_memory()
 - **같은 파일에 같은 기능을 반복 구현하지 마라.** 새로운 기능은 별도 파일로 생성하라.
 
-[🏗️ 대형 파일 진화 방법]
-아직 분리되지 않은 대형 파일(fact_core.py)에 기능을 추가할 때:
-1. **새 파일 생성**: database/*.py, utils/*.py 등에 새 모듈 작성
-2. **기존 파일에서 import**: 대형 파일에서는 import 한 줄만 추가
-3. 대형 파일 전체를 다시 작성하지 마라 (토큰 한계로 불완전해짐)
+[🏗️ 파일 크기 제한 - 절대 준수!]
+**⚠️ 200줄 이상 파일은 직접 수정하지 마라!**
+1. 새 기능은 **별도의 새 파일**로 생성하라 (예: utils/helper.py, database/new_module.py)
+2. 기존 파일에는 **import 한 줄만** 추가하라
+3. 200줄 이상 코드를 한 번에 출력하면 **토큰 한계로 잘려서 오류** 발생
 
-**수정 가능한 파일:**
-- nexus/*.py (모듈화 완료: core.py, memory.py, history.py, arrow.py, storage.py)
-- engine/*.py (모듈화 완료: core.py, sync.py, evolution.py, handlers.py, introspect.py, loop.py)
-- corpus/*.py (모듈화 완료: core.py, hydration.py, sync.py, transform.py)
+**수정 가능한 파일 (모두 150줄 이하 모듈):**
+- nexus/*.py (core.py, memory.py, history.py, arrow.py, storage.py)
+- engine/*.py (core.py, sync.py, evolution.py, handlers.py, introspect.py, loop.py)
+- corpus/*.py (core.py, hydration.py, sync.py, transform.py)
+- facts/*.py (node.py, core.py, storage.py, graph.py, snapshot.py)
 - database/*.py, api/*.py
-- 200줄 이하의 모든 파일
+- 새로 생성하는 파일 (utils/*.py 등)
 
 [📜 최근 5회 진화 기록 - 이 파일들은 피하라!]
 {recent_evolutions}
@@ -203,17 +204,15 @@ FILE: 파일명.py
 5. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, snake_case 사용).
 6. 응답의 맨 처음에 "FILE:"로 시작하라. 부가 설명은 코드 뒤에 배치하라.
 
-[🚨 대형 파일 규칙]
-- fact_core.py는 300줄+ 대형 파일이다.
-- 이 파일을 **전체 재작성하지 마라** (토큰 한계로 불완전해짐).
-- 대신 **새 파일 생성** 후 기존 파일에서 import로 연결하라.
+[🚨 파일 크기 제한 - 절대 준수!]
+- **200줄 이상 코드 출력 금지** (토큰 한계로 잘림 → 오류 발생)
+- 새 기능은 **별도 파일**로 생성하라 (예: utils/new_helper.py)
+- 기존 파일에는 **import 한 줄만** 추가하라
 
-[✅ 수정 가능한 파일]
-- nexus/*.py (모듈화 완료)
-- engine/*.py (모듈화 완료)
-- corpus/*.py (모듈화 완료)
+[✅ 수정 가능한 파일 (150줄 이하 모듈)]
+- nexus/*.py, engine/*.py, corpus/*.py, facts/*.py (모듈화 완료)
 - database/*.py, api/*.py
-- 200줄 이하 파일
+- 새로 생성하는 파일 (utils/*.py 등)
 
 [출력 예시 - 이대로만 출력하라]
 FILE: example_file.py
