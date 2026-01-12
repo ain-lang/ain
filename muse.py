@@ -92,25 +92,25 @@ class Muse:
 {compressed_code}
 
 [코딩 규칙 - 매우 중요!]
-1. **반드시** 아래 형식을 정확히 따라라:
+1. **반드시** 아래 형식을 정확히 따라라. 다른 설명은 생략하고 코드에 집중하라.
 
 FILE: 파일명.py
 ```python
-# 여기에 전체 코드 작성
+# 여기에 전체 코드 작성 (일부 수정이 아닌 파일 전체 내용을 작성할 것)
 ```
 
-2. FILE: 마커는 반드시 줄의 맨 앞에 작성하라.
+2. FILE: 마커는 반드시 줄의 맨 앞에 작성하라 (공백이나 기호 없이).
 3. 코드는 반드시 ``` 코드블록 안에 작성하라.
 4. 한 번에 1-2개 파일만 수정하라 (작은 단위로 진화).
 5. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, snake_case 사용).
 6. 기존 코드를 유지하면서 필요한 부분만 교체하거나 추가하라.
+7. **특히 nexus.py를 수정할 때는 class Nexus와 기존 메서드들을 반드시 포함하라.**
 
-[출력 예시]
-FILE: nexus.py
+[출력 예시 - 이대로만 출력하라]
+FILE: example_file.py
 ```python
-# 수정된 nexus.py 전체 코드
-class Nexus:
-    ...
+import os
+# ... full code ...
 ```
 """
         coder_result = self.coder_client.chat([
@@ -143,19 +143,33 @@ class Nexus:
         ])
         
         updates = []
-        # FILE: 또는 **FILE:** 또는 # FILE: 등 유연하게 파싱
-        file_sections = re.split(r'(?i)[#\*]*FILE:\s*', code_output)[1:]
+        # FILE: 또는 [FILE] 또는 **FILE:** 또는 # FILE: 등 유연하게 파싱
+        # 대소문자 무시, 앞에 기호나 공백이 있을 수 있음
+        file_sections = re.split(r'(?i)(?:\n|^)[#\*\[ ]*FILE[ :\]]*\s*', code_output)
+        if len(file_sections) > 1:
+            file_sections = file_sections[1:]
+        else:
+            file_sections = []
         
         if not file_sections:
-            # FILE: 마커가 없으면 대체 패턴 시도
+            # FILE: 마커가 없으면 대체 패턴 시도 (파일명: 형식)
             print("⚠️ [Muse] FILE: 마커 없음, 대체 패턴 시도...")
-            # 파일명이 포함된 코드 블록 찾기 (```python:filename.py 형식)
+            # 1. ```python:filename.py 형식
             alt_pattern = re.findall(r'```(?:python|py)?:?\s*(\S+\.py)\s*\n(.*?)```', code_output, re.DOTALL)
             for filename, code in alt_pattern:
                 filename = filename.strip().lstrip('./')
                 if filename not in PROTECTED_FILES:
                     updates.append({"filename": filename, "code": code.strip()})
-                    print(f"📦 [Muse] 대체 파싱 성공: {filename}")
+                    print(f"📦 [Muse] 대체 파싱 1 성공: {filename}")
+            
+            # 2. 파일명만 있고 코드블록이 바로 뒤따르는 경우
+            if not updates:
+                alt_pattern2 = re.findall(r'(?:\n|^)([a-zA-Z0-9_/]+\.py)\s*\n\s*```(?:python|py)?\n(.*?)```', code_output, re.DOTALL)
+                for filename, code in alt_pattern2:
+                    filename = filename.strip().lstrip('./')
+                    if filename not in PROTECTED_FILES:
+                        updates.append({"filename": filename, "code": code.strip()})
+                        print(f"📦 [Muse] 대체 파싱 2 성공: {filename}")
         
         for section in file_sections:
             lines = section.split('\n')
@@ -191,6 +205,12 @@ class Nexus:
                 print(f"⚠️ [Muse] 코드 블록 없음: {filename}")
         
         if not updates:
-            print(f"⚠️ [Muse] 파싱된 updates 없음. Coder 응답 샘플: {code_output[:500]}...")
+            sample = code_output[:200].replace('`', "'")
+            print(f"⚠️ [Muse] 파싱된 updates 없음. Coder 응답 샘플: {sample}...")
+            return {
+                "intent": intent, 
+                "updates": [], 
+                "error": f"Coder가 규격에 맞는 코드를 생성하지 못했습니다.\n\n[응답 샘플]\n{sample}..."
+            }
 
         return {"intent": intent, "updates": updates}
