@@ -51,6 +51,23 @@ class Muse:
         except:
             return "Step 5: Memory Consolidation"
 
+    def _get_recent_evolutions(self, limit=5):
+        """최근 진화 기록에서 파일명과 설명을 추출"""
+        try:
+            import json
+            with open("evolution_history.json", "r", encoding="utf-8") as f:
+                history = json.load(f)
+            
+            recent = history[-limit:] if len(history) >= limit else history
+            result = []
+            for h in reversed(recent):
+                file = h.get("file", "unknown")
+                desc = h.get("description", "")[:100]
+                result.append(f"- {file}: {desc}...")
+            return "\n".join(result) if result else "없음"
+        except:
+            return "없음"
+
     def imagine(self, system_context, user_query=None, evolution_history=None, error_context=None):
         """[Muse] Dreamer와 Coder의 협업을 통해 진화를 상상함"""
         
@@ -59,6 +76,9 @@ class Muse:
         
         # 1.5 현재 로드맵 단계 동적 파악
         current_step = self._get_current_roadmap_step()
+        
+        # 1.6 최근 진화 기록 가져오기
+        recent_evolutions = self._get_recent_evolutions(5)
         
         # 2. [Dreamer - Gemini 3 Pro] 전략 및 의도 수립
         print(f"🧠 Dreamer가 진화 방향을 구상 중... ({current_step})")
@@ -85,6 +105,9 @@ class Muse:
 - nexus.py에 이미 구현된 것들: recall_memories(), _store_to_vector_db(), _text_to_simple_embedding(), record_evolution() Dual-Write
 - database/lance_bridge.py에 이미 구현된 것들: LanceBridge 클래스, add_memory(), search_memory()
 - **같은 파일에 같은 기능을 반복 구현하지 마라.** 새로운 기능이나 다른 파일로 확장하라.
+
+[📜 최근 5회 진화 기록 - 이 파일들은 피하라!]
+{recent_evolutions}
 
 [출력 규칙]
 - 반드시 첫 줄에 `SYSTEM_INTENT: (여기에 위의 규칙에 따른 상세한 진화 의도를 작성)`을 작성하라.

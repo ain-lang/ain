@@ -85,6 +85,10 @@ class AINCore:
         self._last_sync_time: Optional[datetime] = None
         self._sync_interval = 60  # 60초마다 DB 동기화
         
+        # 🛡️ 중복 진화 방지 상태
+        self._no_change_counter = 0  # 연속 무변경 횟수
+        self._recent_evolved_files = []  # 최근 진화된 파일 목록 (최대 10개)
+        
         print("✅ AIN Core 초기화 완료")
         self._log_bridge_status()
 
@@ -203,9 +207,18 @@ class AINCore:
             print("🧠 Muse가 진화 방향을 구상 중...")
             context = self.cc.synthesize_context(user_query=user_query)
             
+            # 🛡️ 중복 방지: 최근 진화 파일 목록 전달
+            avoid_files_hint = ""
+            if self._recent_evolved_files:
+                avoid_files_hint = f"\n\n[🚨 최근 진화된 파일 - 다른 파일로 진화하라]\n{', '.join(self._recent_evolved_files[-5:])}"
+            
+            # 연속 무변경 시 강제 방향 전환
+            if self._no_change_counter >= 2:
+                avoid_files_hint += f"\n\n[⚠️ 연속 {self._no_change_counter}회 변경 없음! 반드시 다른 파일(ain_engine.py, corpus_callosum.py 등)을 수정하라]"
+            
             imagination = self.muse.imagine(
                 system_context=system_snapshot,
-                user_query=user_query,
+                user_query=(user_query or "") + avoid_files_hint,
                 evolution_history=evolution_history
             )
             
@@ -216,6 +229,8 @@ class AINCore:
             # 4. Overseer Execution
             print("⚙️ Overseer가 코드를 적용 중...")
             updates = imagination.get("updates", [])
+            actually_changed = []  # 실제로 변경된 파일만 추적
+            
             for file_change in updates:
                 filename = file_change.get("filename")
                 code = file_change.get("code")
@@ -224,6 +239,24 @@ class AINCore:
                     # 🛡️ 보호 파일 체크 (Muse가 생성했더라도 Overseer에서 한 번 더 차단)
                     if self.overseer.is_protected(filename):
                         print(f"🛡️ {filename}은(는) 보호된 파일입니다. 수정을 거부합니다.")
+                        continue
+                    
+                    # 🔍 기존 코드와 비교하여 실제 변경이 있는지 확인
+                    existing_code = ""
+                    target_path = os.path.join(self.overseer.base_path, filename)
+                    if os.path.exists(target_path):
+                        try:
+                            with open(target_path, "r", encoding="utf-8") as f:
+                                existing_code = f.read()
+                        except:
+                            pass
+                    
+                    # 코드 정규화 비교 (공백/줄바꿈 무시)
+                    new_normalized = code.strip().replace('\r\n', '\n')
+                    old_normalized = existing_code.strip().replace('\r\n', '\n')
+                    
+                    if new_normalized == old_normalized:
+                        print(f"⏭️ {filename}: 변경 없음 (기존 코드와 동일), 스킵")
                         continue
                         
                     # 코드 검증
@@ -236,6 +269,7 @@ class AINCore:
                     success, apply_msg = self.overseer.apply_evolution(filename, code)
                     if success:
                         result["files_modified"].append(filename)
+                        actually_changed.append(filename)
                         print(f"✅ {filename} 진화 완료")
                         
                         # 진화 기록
@@ -246,21 +280,34 @@ class AINCore:
                             description=imagination.get("intent", "Evolution applied"),
                             status="success"
                         )
+                        
+                        # 🛡️ 최근 진화 파일 목록 업데이트
+                        if filename not in self._recent_evolved_files:
+                            self._recent_evolved_files.append(filename)
+                        if len(self._recent_evolved_files) > 10:
+                            self._recent_evolved_files.pop(0)
                     else:
                         print(f"❌ {filename} 적용 실패: {apply_msg}")
             
+            # 🛡️ 연속 무변경 카운터 업데이트
+            if not actually_changed:
+                self._no_change_counter += 1
+                print(f"⚠️ 실제 변경된 파일 없음 (연속 {self._no_change_counter}회)")
+            else:
+                self._no_change_counter = 0  # 리셋
+            
             # 5. Growth Recording & Sync
-            if result["files_modified"]:
-                self.nexus.increment_growth(len(result["files_modified"]) * 10)
+            if actually_changed:  # 실제 변경된 파일이 있을 때만
+                self.nexus.increment_growth(len(actually_changed) * 10)
                 result["success"] = True
                 result["action"] = imagination.get("intent", "Evolution completed")
                 
                 # 테스트 실행
-                print("🧪 자가 검증 시작...")
+                print(f"🧪 자가 검증 시작... (적용됨: {', '.join(actually_changed)})")
                 tests_passed, test_report = self.overseer.run_unit_tests()
                 if not tests_passed:
                     print(f"🚨 테스트 실패! 롤백을 수행합니다.\n{test_report}")
-                    for filename in result["files_modified"]:
+                    for filename in actually_changed:
                         self.overseer.rollback(filename)
                     result["success"] = False
                     result["error"] = f"Unit test failed: {test_report[:200]}"
@@ -270,9 +317,17 @@ class AINCore:
                 await self._sync_to_database()
                 
                 # GitHub Push (Async 환경에서도 동기 호출)
-                push_ok, push_msg, sha = self.github.commit_and_push(f"Evolution: {result['action']}")
-                if not push_ok:
+                push_ok, push_msg, sha = self.github.commit_and_push(f"🧬 Evolution: {result['action'][:80]}")
+                if push_ok:
+                    result["commit_sha"] = sha
+                    print(f"✅ Git Push 성공: {sha}")
+                else:
                     print(f"⚠️ Git Push 실패: {push_msg}")
+            else:
+                # 변경 없음 처리
+                result["success"] = False
+                result["error"] = "No actual changes (code identical to existing)"
+                result["action"] = "skipped_no_change"
             
             return result
             
