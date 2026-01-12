@@ -1,6 +1,7 @@
 import re
 import os
 from api import OpenRouterClient
+from code_sanitizer import sanitize_code_output, get_error_message, is_valid_output
 
 class Muse:
     """
@@ -234,62 +235,13 @@ import ...
             code_output = coder_result["content"]
             print(f"📝 [Muse] Coder 응답 길이: {len(code_output)} chars")
             
-            # 🔧 전처리
-            if "'''" in code_output:
-                code_output = code_output.replace("'''", "```")
-                print("🔄 [Muse] '''를 ```로 자동 치환함")
+            # 🔧 Code Sanitizer로 후처리 (보호된 모듈)
+            code_output, sanitize_result = sanitize_code_output(code_output, verbose=True)
             
-            # 🔧 Git 충돌 마커 자동 제거 (후처리)
-            conflict_markers = ['<<<<<<<', '=======', '>>>>>>>', 'HEAD', '<<<<<<< HEAD']
-            lines = code_output.split('\n')
-            cleaned_lines = []
-            in_conflict_block = False
-            for line in lines:
-                # 충돌 시작/끝 마커 건너뛰기
-                if line.strip().startswith('<<<<<<<') or line.strip().startswith('>>>>>>>'):
-                    in_conflict_block = not in_conflict_block if line.strip().startswith('<<<<<<<') else False
-                    print(f"🔧 [Muse] 충돌 마커 제거: {line[:30]}...")
-                    continue
-                # ======= 구분선 건너뛰기
-                if line.strip() == '=======' or line.strip().startswith('======='):
-                    print(f"🔧 [Muse] 충돌 구분선 제거")
-                    continue
-                cleaned_lines.append(line)
-            
-            if len(cleaned_lines) != len(lines):
-                code_output = '\n'.join(cleaned_lines)
-                print(f"🔧 [Muse] 충돌 마커 제거 완료: {len(lines)} -> {len(cleaned_lines)} 줄")
-            
-            # 🚨 Git 충돌 마커 감지 (제거 후에도 남아있는지 확인)
-            has_conflict = any(marker in code_output for marker in ['<<<<<<<', '>>>>>>>'])
-            
-            # 🚨 Diff 형식 감지 (+ 또는 -로 시작하는 줄, @@ 마커)
-            current_lines = code_output.split('\n')
-            diff_indicators = [l for l in current_lines if l.strip().startswith('+ ') or l.strip().startswith('- ')]
-            is_diff_format = len(diff_indicators) > 3 or '@@ ' in code_output
-            
-            # 🚨 내용 생략 감지 (더 구체적인 패턴만)
-            omission_patterns = [
-                r'#\s*\.\.\.\s*existing',      # # ... existing
-                r'#\s*\.\.\.\s*rest',          # # ... rest of
-                r'#\s*\.\.\.\s*same',          # # ... same as
-                r'#\s*\.\.\.\s*unchanged',     # # ... unchanged
-                r'#\s*keep\s+existing',        # # keep existing
-                r'#\s*unchanged\s+from',       # # unchanged from
-            ]
-            has_omission = any(re.search(p, code_output, re.I) for p in omission_patterns)
-            
-            if has_conflict or is_diff_format:
-                last_error = f"Git 충돌 마커 또는 diff 형식(+/-)이 감지됨. " \
-                             f"diff: {len(diff_indicators)}줄, conflict: {has_conflict}. " \
-                             "절대 diff 형식을 사용하지 말고 전체 파일을 새로 작성하라."
-                print(f"🚨 [Muse] Conflict/Diff 감지! 재시도...")
-                continue
-            
-            if has_omission:
-                last_error = "코드 생략 패턴(# ... existing 등)이 감지됨. " \
-                             "생략하지 말고 전체 코드를 작성하라."
-                print(f"🚨 [Muse] Omission 감지! 재시도...")
+            # 🚨 문제 감지 시 재시도
+            if not is_valid_output(sanitize_result):
+                last_error = get_error_message(sanitize_result)
+                print(f"🚨 [Muse] Sanitizer 문제 감지! 재시도...")
                 continue
             
             # 🚨 구문 검사 (Python 파일)
