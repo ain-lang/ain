@@ -457,5 +457,23 @@
     "description": "현재 `database/lance_bridge.py`를 통해 벡터 메모리 인프라(Step 4)는 확보되었으나, 시스템의 '우뇌'이자 기억 관리자인 `Nexus`가 이를 전혀 활용하지 못하고 레거시 JSON 파일(`evolution_history.json`)에만 의존하고 있다. 따라서 이번 진화의 핵심 의도는 **'Nexus의 의미론적 기억 확장(Semant",
     "status": "success",
     "error": null
+  },
+  {
+    "timestamp": "2026-01-12T03:55:49.595694",
+    "type": "Evolution",
+    "action": "Update",
+    "file": "nexus.py",
+    "description": "현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 `database/lance_bridge.py`와 스키마 `database/arrow_schema.py`는 확보되었으나, 이를 실제로 구동하여 기억을 저장하고 검색하는 **Nexus 엔진의 제어 로직(`nexus.py`)**이 미흡하다. 현재의 Nexus는 La",
+    "status": "success",
+    "error": null
+  },
+  {
+    "timestamp": "2026-01-12T04:07:25.070745",
+    "type": "Evolution",
+    "action": "Update",
+    "file": "corpus_callosum.py",
+    "description": "현재 'Step 4: Vector Memory' 단계에서 벡터 저장소 드라이버(`database/lance_bridge.py`)는 확보되었으나, 시스템의 중추 신경망인 `corpus_callosum.py`가 이를 인지하지 못해 데이터가 흐르지 않고 있다. 이번 진화에서는 `corpus_callosum.py`를 수정하여 **'의미론적 동기화(Semantic ",
+    "status": "success",
+    "error": null
   }
 ]

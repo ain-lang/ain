@@ -9,6 +9,10 @@ Step 4 Evolution - Semantic Memory Expansion:
 
 import json
 import os
+<<<<<<< HEAD
+=======
+import hashlib
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -45,9 +49,16 @@ class Nexus:
     - LanceBridge 통합: 진화 기록을 벡터화하여 저장
     - Dual-Write: JSON 저장과 동시에 Vector DB에도 저장
     - recall_memories(): 의미 기반 유사 기억 검색
+<<<<<<< HEAD
     """
     
     # 간단한 텍스트 임베딩을 위한 기본 차원
+=======
+    - _generate_embedding(): 텍스트를 384차원 벡터로 변환
+    """
+    
+    # 임베딩 벡터 차원 (LanceBridge와 동기화)
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
     EMBEDDING_DIM = 384
     
     def __init__(self, memory_file="evolution_history.json", dialogue_file="dialogue_memory.json"):
@@ -73,6 +84,13 @@ class Nexus:
         self._load_metrics()
         self._load_history_cache()
 
+<<<<<<< HEAD
+=======
+    # =========================================================================
+    # Step 4: LanceBridge Initialization
+    # =========================================================================
+    
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
     def _init_lance_bridge(self):
         """LanceBridge 싱글톤 초기화 (실패 시 Graceful Degradation)"""
         if not HAS_LANCE:
@@ -92,6 +110,330 @@ class Nexus:
             self._lance_bridge = None
             self._lance_connected = False
 
+<<<<<<< HEAD
+=======
+    # =========================================================================
+    # Step 4: Embedding Generation
+    # =========================================================================
+    
+    def _generate_embedding(self, text: str) -> List[float]:
+        """
+        텍스트를 384차원 벡터로 변환한다.
+        
+        현재 구현: 경량화된 해시 기반 의사 임베딩 (Deterministic)
+        - 동일 텍스트는 항상 동일 벡터 생성
+        - 유사한 텍스트는 어느 정도 유사한 벡터 생성 (n-gram 기반)
+        
+        추후 확장: OpenAI/Sentence-Transformers API 연동 가능
+        
+        Args:
+            text: 임베딩할 텍스트
+        
+        Returns:
+            384차원 float 벡터
+        """
+        import math
+        
+        if not text or not text.strip():
+            # 빈 텍스트는 영벡터 반환
+            return [0.0] * self.EMBEDDING_DIM
+        
+        # 텍스트 정규화
+        normalized = text.lower().strip()
+        
+        # 1. 전체 텍스트 해시 (기본 시드)
+        full_hash = hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+        
+        # 2. N-gram 기반 부분 해시 (유사성 보존)
+        ngram_size = 3
+        ngrams = []
+        words = normalized.split()
+        
+        # 단어 단위 n-gram
+        for i in range(max(1, len(words) - ngram_size + 1)):
+            ngram = ' '.join(words[i:i + ngram_size])
+            ngrams.append(ngram)
+        
+        # 문자 단위 n-gram (짧은 텍스트 대응)
+        for i in range(max(1, len(normalized) - ngram_size + 1)):
+            ngrams.append(normalized[i:i + ngram_size])
+        
+        # 3. 벡터 생성
+        vector = [0.0] * self.EMBEDDING_DIM
+        
+        # 전체 해시로 기본 벡터 시드
+        for i in range(self.EMBEDDING_DIM):
+            hash_idx = i % len(full_hash)
+            char_val = int(full_hash[hash_idx], 16)
+            vector[i] = (char_val - 7.5) / 7.5  # -1 ~ 1 범위로 정규화
+        
+        # N-gram 해시로 벡터 조정 (유사성 보존)
+        for ngram in ngrams:
+            ngram_hash = hashlib.md5(ngram.encode('utf-8')).hexdigest()
+            for i in range(min(32, self.EMBEDDING_DIM)):
+                hash_idx = i % len(ngram_hash)
+                adjustment = (int(ngram_hash[hash_idx], 16) - 7.5) / 75.0
+                vector[i] += adjustment
+        
+        # 4. L2 정규화 (단위 벡터로 변환)
+        magnitude = math.sqrt(sum(v * v for v in vector))
+        if magnitude > 0:
+            vector = [v / magnitude for v in vector]
+        
+        return vector
+
+    # =========================================================================
+    # Step 4: Dual-Write Memory Operations
+    # =========================================================================
+    
+    def add_memory(
+        self,
+        text: str,
+        memory_type: str = "episodic",
+        source: str = "unknown",
+        metadata: Dict[str, Any] = None
+    ) -> bool:
+        """
+        새로운 기억을 저장한다 (Dual-Write: JSON + Vector DB).
+        
+        Args:
+            text: 기억할 텍스트 내용
+            memory_type: 기억 유형 (episodic, semantic, procedural)
+            source: 기억의 출처 (evolution, conversation 등)
+            metadata: 추가 메타데이터
+        
+        Returns:
+            저장 성공 여부
+        """
+        if not text or not text.strip():
+            return False
+        
+        # 1. 임베딩 생성
+        vector = self._generate_embedding(text)
+        
+        # 2. LanceDB에 저장 (Vector DB)
+        lance_success = False
+        if self._lance_connected and self._lance_bridge:
+            try:
+                lance_success = self._lance_bridge.add_memory(
+                    text=text,
+                    vector=vector,
+                    memory_type=memory_type,
+                    source=source,
+                    metadata=metadata
+                )
+            except Exception as e:
+                print(f"⚠️ LanceDB 저장 실패 (계속 진행): {e}")
+        
+        # 3. JSON 캐시에도 저장 (영속성 백업)
+        memory_record = {
+            "timestamp": datetime.now().isoformat(),
+            "text": text,
+            "memory_type": memory_type,
+            "source": source,
+            "metadata": metadata or {},
+            "has_vector": lance_success
+        }
+        
+        if memory_type == "episodic":
+            self._dialogue_cache.append(memory_record)
+            self._save_dialogue_cache()
+        else:
+            # semantic/procedural은 evolution history에 저장
+            self._evolution_history_cache.append({
+                "timestamp": memory_record["timestamp"],
+                "type": "MEMORY",
+                "action": "Store",
+                "file": source,
+                "description": text[:200],  # 요약
+                "status": "success" if lance_success else "json_only",
+                "error": None
+            })
+            self._save_history_cache()
+        
+        return True
+
+    def recall_memories(
+        self,
+        query: str,
+        limit: int = 5,
+        memory_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        의미론적 유사도 기반으로 기억을 검색한다.
+        
+        Args:
+            query: 검색 쿼리 텍스트
+            limit: 반환할 최대 결과 수
+            memory_type: 특정 기억 유형으로 필터링 (선택)
+        
+        Returns:
+            유사한 기억 목록 (유사도 순 정렬)
+        """
+        if not query or not query.strip():
+            return []
+        
+        # 1. 쿼리 임베딩 생성
+        query_vector = self._generate_embedding(query)
+        
+        # 2. LanceDB에서 검색 (Vector Search)
+        if self._lance_connected and self._lance_bridge:
+            try:
+                results = self._lance_bridge.search_memory(
+                    query_vector=query_vector,
+                    limit=limit,
+                    memory_type=memory_type
+                )
+                
+                if results:
+                    # 결과 포맷팅 (Muse에게 제공할 형태)
+                    formatted = []
+                    for mem in results:
+                        formatted.append({
+                            "content": mem.get("text", ""),
+                            "type": mem.get("memory_type", "unknown"),
+                            "source": mem.get("source", "unknown"),
+                            "timestamp": mem.get("timestamp", ""),
+                            "relevance": 1.0 - mem.get("distance", 0.0),  # 거리 → 유사도
+                        })
+                    return formatted
+            except Exception as e:
+                print(f"⚠️ LanceDB 검색 실패 (Fallback 사용): {e}")
+        
+        # 3. Fallback: JSON 캐시에서 키워드 기반 검색
+        return self._fallback_keyword_search(query, limit, memory_type)
+
+    def _fallback_keyword_search(
+        self,
+        query: str,
+        limit: int,
+        memory_type: Optional[str]
+    ) -> List[Dict[str, Any]]:
+        """
+        Vector DB 미사용 시 키워드 기반 검색 (Fallback)
+        """
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+        
+        results = []
+        
+        # 대화 캐시 검색
+        for mem in self._dialogue_cache:
+            text = mem.get("text", "").lower()
+            if memory_type and mem.get("memory_type") != memory_type:
+                continue
+            
+            # 단순 키워드 매칭 점수
+            text_words = set(text.split())
+            overlap = len(query_words & text_words)
+            
+            if overlap > 0 or query_lower in text:
+                results.append({
+                    "content": mem.get("text", ""),
+                    "type": mem.get("memory_type", "episodic"),
+                    "source": mem.get("source", "dialogue"),
+                    "timestamp": mem.get("timestamp", ""),
+                    "relevance": overlap / max(len(query_words), 1),
+                })
+        
+        # 진화 기록 검색
+        for record in self._evolution_history_cache:
+            desc = record.get("description", "").lower()
+            if memory_type and memory_type != "semantic":
+                continue
+            
+            desc_words = set(desc.split())
+            overlap = len(query_words & desc_words)
+            
+            if overlap > 0 or query_lower in desc:
+                results.append({
+                    "content": record.get("description", ""),
+                    "type": "semantic",
+                    "source": record.get("file", "evolution"),
+                    "timestamp": record.get("timestamp", ""),
+                    "relevance": overlap / max(len(query_words), 1),
+                })
+        
+        # 유사도 순 정렬
+        results.sort(key=lambda x: x["relevance"], reverse=True)
+        return results[:limit]
+
+    def format_memories_for_context(self, memories: List[Dict[str, Any]]) -> str:
+        """
+        검색된 기억을 LLM 컨텍스트용 문자열로 포맷팅한다.
+        """
+        if not memories:
+            return "[관련 기억 없음]"
+        
+        formatted = "[관련 기억]\n"
+        for i, mem in enumerate(memories, 1):
+            relevance_pct = int(mem.get("relevance", 0) * 100)
+            formatted += f"{i}. [{mem.get('type', '?')}] ({relevance_pct}% 관련)\n"
+            formatted += f"   {mem.get('content', '')[:150]}...\n"
+            formatted += f"   출처: {mem.get('source', '?')} @ {mem.get('timestamp', '?')[:10]}\n"
+        
+        return formatted
+
+    # =========================================================================
+    # Evolution History Management (Dual-Write Enhanced)
+    # =========================================================================
+    
+    def append_history(self, record: Dict[str, Any]):
+        """
+        진화 기록을 추가한다 (Dual-Write: JSON + Vector DB).
+        """
+        # 1. JSON 캐시에 추가
+        self._evolution_history_cache.append(record)
+        self._save_history_cache()
+        
+        # 2. Vector DB에도 저장 (의미론적 검색 가능하도록)
+        description = record.get("description", "")
+        if description and self._lance_connected:
+            self.add_memory(
+                text=description,
+                memory_type="semantic",
+                source=record.get("file", "evolution"),
+                metadata={
+                    "action": record.get("action", ""),
+                    "type": record.get("type", ""),
+                    "status": record.get("status", "")
+                }
+            )
+        
+        # 3. 성장 지표 업데이트
+        if record.get("status") == "success":
+            self.metrics["growth_score"] += 10
+            self.metrics["total_evolutions"] += 1
+            
+            # 레벨업 체크 (100점당 1레벨)
+            new_level = (self.metrics["growth_score"] // 100) + 1
+            if new_level > self.metrics["level"]:
+                self.metrics["level"] = new_level
+                print(f"🎉 Level Up! AIN is now Level {new_level}")
+            
+            self._save_metrics()
+
+    def _save_history_cache(self):
+        """진화 기록 캐시를 JSON 파일로 저장"""
+        try:
+            with open(self.memory_file, 'w', encoding='utf-8') as f:
+                json.dump(self._evolution_history_cache, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"❌ History 저장 실패: {e}")
+
+    def _save_dialogue_cache(self):
+        """대화 기록 캐시를 JSON 파일로 저장"""
+        try:
+            with open(self.dialogue_file, 'w', encoding='utf-8') as f:
+                json.dump(self._dialogue_cache, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"❌ Dialogue 저장 실패: {e}")
+
+    # =========================================================================
+    # Existing Methods (Preserved)
+    # =========================================================================
+
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
     def _load_metrics(self):
         """성장 지표 로드"""
         data = self.load_data("nexus_metrics.json")
@@ -109,6 +451,16 @@ class Nexus:
             self._evolution_history_cache = data
         else:
             self._evolution_history_cache = []
+<<<<<<< HEAD
+=======
+        
+        # 대화 기록도 로드
+        dialogue_data = self.load_data(self.dialogue_file)
+        if dialogue_data and isinstance(dialogue_data, list):
+            self._dialogue_cache = dialogue_data
+        else:
+            self._dialogue_cache = []
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
 
     def register_module(self, name, instance):
         """시스템 모듈 등록"""
@@ -121,6 +473,7 @@ class Nexus:
         report += f"- Level: {self.metrics['level']} (Score: {self.metrics['growth_score']})\n"
         report += f"- Active Modules: {', '.join(self.modules.keys())}\n"
         report += f"- Total Evolutions: {self.metrics['total_evolutions']}\n"
+<<<<<<< HEAD
         report += f"- Cached History Records: {len(self._evolution_history_cache)}\n"
         
         # Step 4: Vector Memory 상태 추가
@@ -543,10 +896,63 @@ class Nexus:
         진화 기록을 Arrow Table로 직렬화하여 반환.
         SurrealDB 저장 또는 외부 시스템 연동에 사용.
         """
+=======
+        report += f"- Evolution Cache: {len(self._evolution_history_cache)} records\n"
+        report += f"- Dialogue Cache: {len(self._dialogue_cache)} records\n"
+        
+        # Vector Memory 상태
+        if self._lance_connected:
+            report += f"- Vector Memory: ✅ Connected ({self._lance_bridge.count_memories()} memories)\n"
+        else:
+            report += f"- Vector Memory: ❌ Disconnected (JSON-Only Mode)\n"
+        
+        return report
+
+    def load_data(self, filename):
+        """JSON 파일에서 데이터 로드"""
+        if os.path.exists(filename):
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"⚠️ {filename} 로드 실패: {e}")
+        return None
+
+    def save_data(self, filename, data):
+        """JSON 파일로 데이터 저장"""
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"❌ {filename} 저장 실패: {e}")
+
+    def get_evolution_summary(self, limit=10):
+        """최근 진화 기록 요약"""
+        recent = self._evolution_history_cache[-limit:] if self._evolution_history_cache else []
+        
+        if not recent:
+            return "진화 기록이 없습니다."
+        
+        summary = "📜 **Recent Evolution History**\n"
+        for record in reversed(recent):
+            status_icon = "✅" if record.get("status") == "success" else "❌"
+            summary += f"{status_icon} [{record.get('timestamp', '?')[:10]}] "
+            summary += f"{record.get('action', '?')}: {record.get('file', '?')}\n"
+        
+        return summary
+
+    # =========================================================================
+    # Arrow Serialization (Step 3 Compatibility)
+    # =========================================================================
+
+    def export_history_as_arrow(self) -> Optional[pa.Table]:
+        """내부 진화 기록 캐시를 Arrow Table로 직렬화"""
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
         if not self._evolution_history_cache:
             return None
         
         try:
+<<<<<<< HEAD
             # 스키마 정의
             if HAS_SCHEMA:
                 schema = get_history_schema()
@@ -573,19 +979,48 @@ class Nexus:
             
             return table
             
+=======
+            if HAS_SCHEMA:
+                # 스키마 기반 정규화
+                normalized = [history_record_to_dict(r) for r in self._evolution_history_cache]
+                schema = get_history_schema()
+                
+                arrays = {
+                    "timestamp": [r["timestamp"] for r in normalized],
+                    "type": [r["type"] for r in normalized],
+                    "action": [r["action"] for r in normalized],
+                    "file": [r["file"] for r in normalized],
+                    "description": [r["description"] for r in normalized],
+                    "status": [r["status"] for r in normalized],
+                    "error": [r["error"] for r in normalized],
+                }
+                
+                return pa.table(arrays, schema=schema)
+            else:
+                # Fallback: pandas 변환
+                import pandas as pd
+                df = pd.DataFrame(self._evolution_history_cache)
+                return pa.Table.from_pandas(df)
+                
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
         except Exception as e:
             print(f"❌ Arrow 직렬화 실패: {e}")
             return None
 
     def load_history_from_arrow(self, table: pa.Table) -> bool:
+<<<<<<< HEAD
         """
         Arrow Table에서 진화 기록을 복원하여 내부 캐시에 로드.
         SurrealDB에서 복원 시 사용.
         """
+=======
+        """Arrow Table에서 내부 메모리로 복원"""
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)
         if table is None or table.num_rows == 0:
             return False
         
         try:
+<<<<<<< HEAD
             # Arrow Table → Python List[Dict]
             records = table.to_pylist()
             
@@ -635,3 +1070,12 @@ class Nexus:
             lessons += f"- ❌ {record.get('file')}: {record.get('error', record.get('description', ''))[:100]}\n"
         
         return lessons
+=======
+            records = table.to_pylist()
+            self._evolution_history_cache = records
+            print(f"✅ Nexus: {len(records)}개 기록 복원됨")
+            return True
+        except Exception as e:
+            print(f"❌ Arrow 역직렬화 실패: {e}")
+            return False
+>>>>>>> 4e97596 (🧬 Evolution: 현재 'Step 4: LanceDB Vector Memory' 단계에서 벡터 저장소의 드라이버인 'database/lance_bridge.py'와 스키마 'database/arro)

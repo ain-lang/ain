@@ -6,6 +6,10 @@ Step 3 진화 - Runtime Level:
 - hydrate_knowledge(): 부팅 시 SurrealDB에서 최신 상태 복원
 - sync_pulse(): 주기적 상태 동기화 (Arrow Batch → SurrealDB)
 - SurrealArrowBridge를 직접 제어하여 완전한 데이터 파이프라인 구현
+
+Step 4 진화 - Bicameral Memory Integration:
+- _sync_semantic_memory(): LanceDB로 진화 기록 벡터화 저장
+- 좌뇌(SurrealDB/Logic)와 우뇌(LanceDB/Intuition) 동시 동기화
 """
 
 import json
@@ -43,6 +47,14 @@ except ImportError:
     HAS_SCHEMA = False
     print("⚠️ Arrow Schema 임포트 실패. 기본 스키마 사용.")
 
+# LanceBridge 임포트 (Step 4: Vector Memory)
+try:
+    from database.lance_bridge import get_lance_bridge, LanceBridge, LANCE_AVAILABLE
+    HAS_LANCE = LANCE_AVAILABLE
+except ImportError:
+    HAS_LANCE = False
+    print("⚠️ LanceBridge 임포트 실패. Vector Memory 비활성화.")
+
 
 class CorpusCallosum:
     """
@@ -53,7 +65,15 @@ class CorpusCallosum:
     - hydrate_knowledge(): 부팅 시 DB에서 기억 복원 (Hydration)
     - sync_pulse(): 실행 주기마다 상태를 Arrow Batch로 직렬화하여 영구 저장
     - SurrealArrowBridge 인스턴스 관리
+    
+    Step 4 핵심 역할 (Bicameral Memory Integration):
+    - 좌뇌(SurrealDB): 구조화된 지식 그래프 저장
+    - 우뇌(LanceDB): 의미론적 벡터 기억 저장
+    - 양원적 동기화: 두 저장소에 동시 데이터 흐름 제어
     """
+    
+    # 임베딩 벡터 차원 (Nexus와 동기화)
+    EMBEDDING_DIM = 384
     
     def __init__(self, fact_core, nexus):
         self.left_brain = fact_core  # Fact Core (Symbolic Graph)
@@ -65,10 +85,29 @@ class CorpusCallosum:
             self.bridge = SurrealArrowBridge()
             print("🔗 CorpusCallosum: SurrealArrowBridge 초기화 완료")
         
+        # Step 4: LanceBridge 인스턴스화 (Vector Memory)
+        self.vector_bridge: Optional[LanceBridge] = None
+        self._vector_connected: bool = False
+        if HAS_LANCE:
+            try:
+                self.vector_bridge = get_lance_bridge()
+                self._vector_connected = self.vector_bridge.is_connected
+                if self._vector_connected:
+                    print(f"🧠 CorpusCallosum: LanceBridge 연결 성공 (기억 수: {self.vector_bridge.count_memories()})")
+                else:
+                    print("⚠️ CorpusCallosum: LanceBridge 연결 실패. 벡터 메모리 비활성화.")
+            except Exception as e:
+                print(f"❌ CorpusCallosum: LanceBridge 초기화 오류 - {e}")
+                self.vector_bridge = None
+                self._vector_connected = False
+        
         # 연결 상태 추적
         self._bridge_connected: bool = False
         self._last_sync_time: Optional[datetime] = None
         self._sync_count: int = 0
+        
+        # 마지막 동기화된 진화 기록 인덱스 (중복 저장 방지)
+        self._last_synced_evolution_index: int = 0
         
         # 마지막 생성된 배치 캐시
         self._last_batch: Optional[pa.RecordBatch] = None
@@ -118,31 +157,57 @@ class CorpusCallosum:
     async def hydrate_knowledge(self) -> bool:
         """
         [Step 3 핵심] 2단계 Hydration: SurrealDB에서 노드와 관계를 모두 복원.
+        [Step 4 확장] 벡터 DB 연결 상태 확인 및 로깅.
+        
         1. Nodes 복원 (그릇 만들기)
         2. Edges 복원 (신경망 잇기)
+        3. Vector DB 상태 확인 (우뇌 점검)
         """
-        if not self._bridge_connected or not self.bridge:
-            print("ℹ️ Hydration 건너뜀: 브릿지 미연결")
-            return False
+        hydration_results = {
+            "surreal_nodes": False,
+            "surreal_edges": False,
+            "vector_db": False
+        }
         
-        try:
-            # 1단계: 노드(Node) 복원
-            node_table = await self._pull_nodes_from_db()
-            if node_table and node_table.num_rows > 0:
-                self.left_brain.load_from_arrow(node_table)
-            
-            # 2단계: 관계(Edge) 복원
-            edge_table = await self._pull_edges_from_db()
-            if edge_table and edge_table.num_rows > 0:
-                if hasattr(self.left_brain, 'load_edges_from_arrow'):
-                    self.left_brain.load_edges_from_arrow(edge_table)
-            
-            print(f"✨ Hydration 완료: 지식 그래프 위상 재구축됨")
-            return True
+        # Step 3: SurrealDB Hydration
+        if self._bridge_connected and self.bridge:
+            try:
+                # 1단계: 노드(Node) 복원
+                node_table = await self._pull_nodes_from_db()
+                if node_table and node_table.num_rows > 0:
+                    self.left_brain.load_from_arrow(node_table)
+                    hydration_results["surreal_nodes"] = True
                 
-        except Exception as e:
-            print(f"⚠️ Hydration 실패: {e}")
-            return False
+                # 2단계: 관계(Edge) 복원
+                edge_table = await self._pull_edges_from_db()
+                if edge_table and edge_table.num_rows > 0:
+                    if hasattr(self.left_brain, 'load_edges_from_arrow'):
+                        self.left_brain.load_edges_from_arrow(edge_table)
+                        hydration_results["surreal_edges"] = True
+                
+                print(f"✨ SurrealDB Hydration 완료: 지식 그래프 위상 재구축됨")
+                    
+            except Exception as e:
+                print(f"⚠️ SurrealDB Hydration 실패: {e}")
+        else:
+            print("ℹ️ SurrealDB Hydration 건너뜀: 브릿지 미연결")
+        
+        # Step 4: Vector DB 상태 점검
+        if self._vector_connected and self.vector_bridge:
+            try:
+                memory_count = self.vector_bridge.count_memories()
+                print(f"🧠 LanceDB 상태: {memory_count}개 기억 보유 중")
+                hydration_results["vector_db"] = True
+            except Exception as e:
+                print(f"⚠️ LanceDB 상태 확인 실패: {e}")
+        else:
+            print("ℹ️ LanceDB Hydration 건너뜀: 벡터 브릿지 미연결")
+        
+        # 결과 요약
+        success_count = sum(1 for v in hydration_results.values() if v)
+        print(f"📊 Hydration 결과: {success_count}/{len(hydration_results)} 성공")
+        
+        return success_count > 0
 
     async def _pull_nodes_from_db(self) -> Optional[pa.Table]:
         """SurrealDB의 node 테이블에서 데이터를 Arrow Table로 가져옴"""
@@ -232,41 +297,56 @@ class CorpusCallosum:
             return False
 
     # =========================================================================
-    # SYNC PULSE: 주기적 상태 동기화
+    # SYNC PULSE: 주기적 상태 동기화 (Bicameral Integration)
     # =========================================================================
     
     async def sync_pulse(self) -> bool:
         """
         [Step 3 핵심] 실행 주기마다 상태를 Arrow Batch로 직렬화하여 영구 저장
+        [Step 4 확장] 좌뇌(SurrealDB)와 우뇌(LanceDB) 동시 동기화
         
-        FactCore와 Nexus의 현재 상태를 스냅샷 떠서 SurrealDB에 push
+        FactCore와 Nexus의 현재 상태를 스냅샷 떠서 양쪽 DB에 push
         
         Returns:
-            bool: 동기화 성공 여부
+            bool: 동기화 성공 여부 (하나라도 성공하면 True)
         """
-        if not self._bridge_connected or not self.bridge:
-            print("ℹ️ Sync Pulse 건너뜀: 브릿지 미연결")
-            return False
+        sync_start = datetime.now()
+        results = []
         
         try:
-            sync_start = datetime.now()
-            results = []
+            # 1. 좌뇌 동기화: FactCore → SurrealDB
+            if self._bridge_connected and self.bridge:
+                fact_result = await self._sync_fact_nodes()
+                results.append(("FactCore→SurrealDB", fact_result))
+            else:
+                results.append(("FactCore→SurrealDB", False))
+                print("ℹ️ 좌뇌 동기화 건너뜀: SurrealDB 미연결")
             
-            # 1. FactCore 노드 동기화
-            fact_result = await self._sync_fact_nodes()
-            results.append(("FactCore", fact_result))
+            # 2. 좌뇌 동기화: Nexus 메모리 → SurrealDB (진화 히스토리)
+            if self._bridge_connected and self.bridge:
+                nexus_result = await self._sync_nexus_memory()
+                results.append(("Nexus→SurrealDB", nexus_result))
+            else:
+                results.append(("Nexus→SurrealDB", False))
             
-            # 2. Nexus 메모리 동기화 (진화 히스토리)
-            nexus_result = await self._sync_nexus_memory()
-            results.append(("Nexus", nexus_result))
+            # 3. 우뇌 동기화: 진화 기록 → LanceDB (벡터화)
+            if self._vector_connected and self.vector_bridge:
+                semantic_result = await self._sync_semantic_memory()
+                results.append(("Evolution→LanceDB", semantic_result))
+            else:
+                results.append(("Evolution→LanceDB", False))
+                print("ℹ️ 우뇌 동기화 건너뜀: LanceDB 미연결")
             
-            # 3. 동기화 메타데이터 업데이트
+            # 4. 동기화 메타데이터 업데이트
             self._last_sync_time = sync_start
             self._sync_count += 1
             
             # 결과 로깅
             success_count = sum(1 for _, r in results if r)
-            print(f"🔄 Sync Pulse #{self._sync_count} 완료: {success_count}/{len(results)} 성공")
+            total_count = len(results)
+            
+            result_summary = " | ".join([f"{name}: {'✓' if ok else '✗'}" for name, ok in results])
+            print(f"🔄 Sync Pulse #{self._sync_count} 완료: {success_count}/{total_count} 성공 [{result_summary}]")
             
             return success_count > 0
             
@@ -291,271 +371,260 @@ class CorpusCallosum:
             if HAS_SERIALIZER:
                 edge_table = GraphSerializer.edges_to_table(self.left_brain.nodes)
                 if edge_table and edge_table.num_rows > 0:
-                    # 엣지는 'relation' 테이블에 저장하여 RELATE 쿼리 효과 시뮬레이션
                     await asyncio.to_thread(self.bridge.push_batch_sync, edge_table, "relation")
                     print(f"  └─ FactCore Edges: {edge_table.num_rows}개 동기화됨")
             
             return True
             
         except Exception as e:
-            print(f"  └─ FactCore 동기화 실패: {e}")
+            print(f"❌ FactCore 동기화 실패: {e}")
             return False
 
     async def _sync_nexus_memory(self) -> bool:
-        """Nexus의 진화 히스토리를 SurrealDB에 동기화"""
+        """Nexus의 진화 기록을 SurrealDB에 동기화"""
         try:
-            # Nexus에서 최근 진화 기록 가져오기
-            history = self.right_brain.load_data(self.right_brain.memory_file)
+            # Nexus에서 진화 기록 가져오기
+            if hasattr(self.right_brain, '_evolution_history_cache'):
+                history = self.right_brain._evolution_history_cache
+            else:
+                history = []
             
             if not history:
-                return True  # 동기화할 데이터 없음
-            
-            # 최근 10개만 동기화 (전체 히스토리는 부담)
-            recent_history = history[-10:] if len(history) > 10 else history
+                return True  # 빈 히스토리는 성공으로 처리
             
             # Arrow Table로 변환
-            if HAS_ARROW:
-                now_ms = pd.Timestamp.now().floor('ms')
-                
-                table = pa.table({
-                    'id': [f"evolution:{i}" for i in range(len(recent_history))],
-                    'timestamp': [h.get('timestamp', str(now_ms)) for h in recent_history],
-                    'type': [h.get('type', 'UNKNOWN') for h in recent_history],
-                    'file': [h.get('file', '') for h in recent_history],
-                    'status': [h.get('status', 'unknown') for h in recent_history],
-                    'description': [h.get('description', '')[:500] for h in recent_history]
-                })
-                
-                result = await asyncio.to_thread(
-                    self.bridge.push_batch,
-                    table,
-                    "evolution_log"
-                )
-                
-                if result:
-                    print(f"  └─ Nexus: {len(recent_history)}개 진화 기록 동기화됨")
-                return result
+            history_table = self._history_to_arrow(history)
+            if history_table and history_table.num_rows > 0:
+                await asyncio.to_thread(self.bridge.push_batch_sync, history_table, "evolution_history")
+                print(f"  └─ Nexus History: {history_table.num_rows}개 동기화됨")
             
-            return False
+            return True
             
         except Exception as e:
-            print(f"  └─ Nexus 동기화 실패: {e}")
+            print(f"❌ Nexus 메모리 동기화 실패: {e}")
             return False
 
-    # =========================================================================
-    # 기존 메서드 (호환성 유지)
-    # =========================================================================
+    async def _sync_semantic_memory(self) -> bool:
+        """
+        [Step 4 핵심] Nexus의 진화 기록을 LanceDB에 벡터화하여 저장.
+        
+        이 메서드는 '의미론적 동기화(Semantic Synchronization)'를 수행한다:
+        1. Nexus의 evolution_history에서 아직 벡터화되지 않은 기록을 가져온다.
+        2. 각 기록의 description을 텍스트로 추출한다.
+        3. 임베딩 벡터를 생성한다 (Nexus._generate_embedding 호출 또는 Placeholder).
+        4. LanceBridge.add_memory()를 통해 벡터 DB에 저장한다.
+        
+        Returns:
+            bool: 동기화 성공 여부
+        """
+        if not self.vector_bridge or not self._vector_connected:
+            return False
+        
+        try:
+            # 1. Nexus에서 진화 기록 가져오기
+            if hasattr(self.right_brain, '_evolution_history_cache'):
+                full_history = self.right_brain._evolution_history_cache
+            else:
+                full_history = []
+            
+            if not full_history:
+                print("  └─ Semantic Memory: 동기화할 기록 없음")
+                return True
+            
+            # 2. 아직 동기화되지 않은 기록 필터링
+            new_records = full_history[self._last_synced_evolution_index:]
+            
+            if not new_records:
+                print("  └─ Semantic Memory: 새로운 기록 없음 (이미 동기화됨)")
+                return True
+            
+            # 3. 각 기록을 벡터화하여 저장
+            success_count = 0
+            for record in new_records:
+                try:
+                    # 텍스트 추출
+                    description = record.get('description', '')
+                    if not description:
+                        continue
+                    
+                    # 메타데이터 구성
+                    metadata = {
+                        "timestamp": record.get('timestamp', ''),
+                        "type": record.get('type', 'EVOLUTION'),
+                        "action": record.get('action', 'Unknown'),
+                        "file": record.get('file', ''),
+                        "status": record.get('status', 'unknown'),
+                    }
+                    
+                    # 임베딩 벡터 생성
+                    # Nexus에 _generate_embedding 메서드가 있으면 사용, 없으면 Placeholder
+                    if hasattr(self.right_brain, '_generate_embedding'):
+                        vector = self.right_brain._generate_embedding(description)
+                    else:
+                        # Placeholder: 간단한 해시 기반 벡터 (실제 임베딩 모델 연동 전)
+                        vector = self._generate_placeholder_embedding(description)
+                    
+                    # LanceDB에 저장
+                    stored = self.vector_bridge.add_memory(
+                        text=description,
+                        vector=vector,
+                        memory_type="evolution",
+                        source="evolution_history",
+                        metadata=metadata
+                    )
+                    
+                    if stored:
+                        success_count += 1
+                        
+                except Exception as e:
+                    print(f"  ⚠️ 기록 벡터화 실패: {e}")
+                    continue
+            
+            # 4. 동기화 인덱스 업데이트
+            self._last_synced_evolution_index = len(full_history)
+            
+            print(f"  └─ Semantic Memory: {success_count}/{len(new_records)}개 벡터화 완료")
+            return success_count > 0
+            
+        except Exception as e:
+            print(f"❌ Semantic Memory 동기화 실패: {e}")
+            return False
 
-    def _to_arrow_batch(self, raw_data: Dict[str, Any]) -> Optional[pa.RecordBatch]:
-        """데이터를 Arrow RecordBatch로 변환하여 메모리 효율 극대화"""
+    def _generate_placeholder_embedding(self, text: str) -> List[float]:
+        """
+        Placeholder 임베딩 생성 (실제 임베딩 모델 연동 전 임시 사용).
+        
+        텍스트의 해시값을 기반으로 결정론적 벡터를 생성한다.
+        이는 동일한 텍스트에 대해 항상 동일한 벡터를 반환한다.
+        
+        Args:
+            text: 임베딩할 텍스트
+            
+        Returns:
+            384차원 float 벡터
+        """
+        import hashlib
+        
+        # 텍스트 해시 생성
+        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+        
+        # 해시를 숫자 시퀀스로 변환
+        vector = []
+        for i in range(0, min(len(text_hash), self.EMBEDDING_DIM * 2), 2):
+            # 16진수 2자리를 0~1 사이 float로 변환
+            byte_val = int(text_hash[i:i+2], 16)
+            normalized = (byte_val - 128) / 128.0  # -1 ~ 1 범위
+            vector.append(normalized)
+        
+        # 벡터 길이가 부족하면 패딩
+        while len(vector) < self.EMBEDDING_DIM:
+            # 기존 벡터를 반복하여 패딩
+            idx = len(vector) % len(vector) if vector else 0
+            vector.append(vector[idx] * 0.9 if vector else 0.0)
+        
+        return vector[:self.EMBEDDING_DIM]
+
+    def _history_to_arrow(self, history: List[Dict]) -> Optional[pa.Table]:
+        """진화 기록을 Arrow Table로 변환"""
+        if not history or not HAS_ARROW:
+            return None
+        
+        try:
+            return pa.table({
+                'timestamp': [str(h.get('timestamp', '')) for h in history],
+                'type': [str(h.get('type', '')) for h in history],
+                'action': [str(h.get('action', '')) for h in history],
+                'file': [str(h.get('file', '')) for h in history],
+                'description': [str(h.get('description', ''))[:1000] for h in history],
+                'status': [str(h.get('status', '')) for h in history],
+            })
+        except Exception as e:
+            print(f"❌ History → Arrow 변환 실패: {e}")
+            return None
+
+    def format_fact_for_surreal(self) -> Optional[pa.Table]:
+        """FactCore 데이터를 Arrow Table로 변환 (Fallback)"""
         if not HAS_ARROW:
             return None
-            
-        # timestamp 형식 맞춤 (ms)
-        now_ms = pd.Timestamp.now().floor('ms')
         
-        arrays = [
-            pa.array([raw_data.get('source', 'unknown')]),
-            pa.array([raw_data.get('key', 'none')]),
-            pa.array([raw_data.get('value', '')]),
-            pa.array([now_ms], type=pa.timestamp('ms'))
-        ]
-        return pa.RecordBatch.from_arrays(arrays, schema=self.context_schema)
+        try:
+            now = pd.Timestamp.now().floor('ms')
+            data = []
+            
+            for label, node in self.left_brain.nodes.items():
+                data.append({
+                    'id': label,
+                    'label': label,
+                    'data_json': json.dumps(node.data, ensure_ascii=False),
+                    'edges_count': len(node.edges),
+                    'timestamp': now
+                })
+            
+            if not data:
+                return None
+            
+            return pa.table({
+                'id': [d['id'] for d in data],
+                'label': [d['label'] for d in data],
+                'data_json': [d['data_json'] for d in data],
+                'edges_count': [d['edges_count'] for d in data],
+                'timestamp': pa.array([d['timestamp'] for d in data], type=pa.timestamp('ms'))
+            })
+            
+        except Exception as e:
+            print(f"❌ FactCore → Arrow 변환 실패: {e}")
+            return None
+
+    # =========================================================================
+    # CONTEXT SYNTHESIS: 좌뇌와 우뇌 정보 통합
+    # =========================================================================
 
     def synthesize_context(self, user_query: str = None) -> str:
         """
-        [Step 3 진화] 단순 텍스트 융합에서 Arrow Table 기반의 구조화된 데이터로 진화.
-        이 데이터는 이후 SurrealDB의 Record로 직접 매핑됨.
+        좌뇌(Fact Core)와 우뇌(Nexus)의 정보를 통합하여 컨텍스트 생성
         """
-        identity = self.left_brain.get_fact("identity")
-        roadmap = self.left_brain.get_fact("roadmap", "current_focus")
-        prime_directive = self.left_brain.get_fact("prime_directive")
-        history_summary = self.right_brain.get_evolution_summary()
+        context_parts = ["=== AIN NEURAL CONTEXT ===\n"]
         
-        # 텍스트 컨텍스트 생성 (Muse용)
-        context = f"""
-=== AIN NEURAL CONTEXT ===
-[Identity Matrix]
-Name: {identity['name']} (v{identity['version']})
-Creator: {identity['creator']}
-Focus: {roadmap}
+        # 좌뇌: FactCore 정보
+        if hasattr(self.left_brain, 'get_core_context'):
+            context_parts.append("[LEFT BRAIN - Symbolic Logic]\n")
+            context_parts.append(self.left_brain.get_core_context())
+        
+        # 우뇌: Nexus 정보
+        if hasattr(self.right_brain, 'get_evolution_summary'):
+            context_parts.append("\n[RIGHT BRAIN - Evolution Memory]\n")
+            context_parts.append(self.right_brain.get_evolution_summary())
+        
+        # 사용자 쿼리
+        if user_query:
+            context_parts.append(f"\n[USER QUERY]\n{user_query}")
+        
+        # 동기화 상태
+        context_parts.append(f"\n[SYNC STATUS]")
+        context_parts.append(f"  - SurrealDB: {'연결됨' if self._bridge_connected else '미연결'}")
+        context_parts.append(f"  - LanceDB: {'연결됨' if self._vector_connected else '미연결'}")
+        context_parts.append(f"  - 마지막 동기화: {self._last_sync_time or 'N/A'}")
+        context_parts.append(f"  - 총 동기화 횟수: {self._sync_count}")
+        
+        return "\n".join(context_parts)
 
-[Prime Directive]
-{prime_directive}
-
-[Evolutionary Memory (Right Brain)]
-{history_summary}
-
-[Current Stimulus]
-Query: {user_query if user_query else "Autonomous Self-Reflection"}
-
-[Sync Status]
-Last Sync: {self._last_sync_time or 'Never'}
-Sync Count: {self._sync_count}
-Bridge Connected: {self._bridge_connected}
-==========================
-"""
-        
-        # [Step 3] 내부적으로 Arrow Batch 생성
-        if HAS_ARROW:
-            integrated_data = {
-                "source": "corpus_callosum",
-                "key": "synthesis_v1",
-                "value": context.strip()
-            }
-            self._last_batch = self._to_arrow_batch(integrated_data)
-            
-        return context.strip()
-
-    def bridge_to_arrow(self, data_list: List[Dict[str, Any]]) -> Optional[pa.Table]:
-        """
-        입력된 딕셔너리 리스트를 Apache Arrow Table로 변환한다. (Zero-Copy 기반 마련)
-        """
-        if not HAS_ARROW or not data_list:
-            return None
-        
-        df = pd.DataFrame(data_list)
-        table = pa.Table.from_pandas(df)
-        self._last_table = table
-        return table
-
-    def format_fact_for_surreal(self) -> Optional[pa.Table]:
-        """
-        FactCore의 데이터를 SurrealDB에 고속 적재하기 위한 Arrow Table 형식으로 추출한다.
-        """
-        if not HAS_ARROW:
-            print("⚠️ Arrow 미설치")
-            return None
-        
-        # 디버그: FactCore 노드 상태 확인
-        node_count = len(self.left_brain.nodes) if hasattr(self.left_brain, 'nodes') else 0
-        print(f"📊 FactCore 노드 수: {node_count}")
-        
-        if node_count == 0:
-            print(f"⚠️ nodes 속성 존재: {hasattr(self.left_brain, 'nodes')}")
-            print(f"⚠️ facts 키: {list(self.left_brain.facts.keys()) if hasattr(self.left_brain, 'facts') else 'N/A'}")
-            
-        facts = []
-        now_ms = pd.Timestamp.now().floor('ms')
-        
-        for label, node in self.left_brain.nodes.items():
-            fact_entry = {
-                "id": label,  # ID만 전달 (테이블명은 bridge에서 추가)
-                "label": label,
-                "data_json": json.dumps(node.data, ensure_ascii=False),
-                "edges_count": len(node.edges),
-                "timestamp": now_ms
-            }
-            facts.append(fact_entry)
-        
-        if not facts:
-            return None
-            
-        # 스키마에 맞게 Arrow Table 생성
-        table = pa.table({
-            'id': [f['id'] for f in facts],
-            'label': [f['label'] for f in facts],
-            'data_json': [f['data_json'] for f in facts],
-            'edges_count': [f['edges_count'] for f in facts],
-            'timestamp': pa.array([f['timestamp'] for f in facts], type=pa.timestamp('ms'))
-        })
-        
-        return table
-
-    def push_to_surreal(self, batch: pa.RecordBatch = None, table: pa.Table = None) -> bool:
-        """
-        [Step 3 핵심 구현] Arrow 데이터를 SurrealDB에 영구 저장.
-        RecordBatch 또는 Table을 받아 브릿지를 통해 저장.
-        """
-        if not HAS_ARROW or not self.bridge:
-            print("⚠️ Arrow 또는 Bridge 미활성화. 저장 건너뜀.")
-            return False
-        
-        try:
-            # RecordBatch를 Table로 변환
-            if batch is not None and table is None:
-                table = pa.Table.from_batches([batch])
-            
-            if table is None:
-                # 캐시된 테이블 사용
-                table = self._last_table
-                
-            if table is None:
-                print("⚠️ 저장할 데이터 없음.")
-                return False
-            
-            # 브릿지를 통해 저장 (동기 인터페이스 사용)
-            result = self.bridge.push_batch(table, "context_synthesis")
-            print(f"✅ SurrealDB 저장 완료: {table.num_rows} rows")
-            return result
-            
-        except Exception as e:
-            print(f"❌ SurrealDB 저장 실패: {e}")
-            return False
-
-    def pull_from_surreal(self, query: str = None) -> Optional[pa.Table]:
-        """
-        [Step 3 핵심 구현] SurrealDB에서 Arrow Table로 데이터 인출.
-        Zero-Copy 방식으로 메모리 효율 극대화.
-        """
-        if not self.bridge:
-            print("⚠️ Bridge 미활성화. 인출 불가.")
+    def bridge_to_arrow(self, data: List[Dict]) -> Optional[pa.Table]:
+        """범용 데이터를 Arrow Table로 변환"""
+        if not data or not HAS_ARROW:
             return None
         
         try:
-            table = self.bridge.pull_batch(query, "context_synthesis")
-            if table:
-                print(f"✅ SurrealDB 인출 완료: {table.num_rows} rows")
-            return table
+            return pa.Table.from_pylist(data)
         except Exception as e:
-            print(f"❌ SurrealDB 인출 실패: {e}")
+            print(f"❌ Arrow 변환 실패: {e}")
             return None
 
-    def sync_facts_to_surreal(self) -> bool:
-        """
-        FactCore의 모든 노드와 엣지를 SurrealDB에 동기화.
-        """
-        if not self.bridge:
-            print("⚠️ Bridge 없음 - 동기화 스킵")
-            return False
-            
-        # 1. 노드 동기화
-        node_table = GraphSerializer.nodes_to_table(self.left_brain.nodes) if HAS_SERIALIZER else self.format_fact_for_surreal()
-        if node_table:
-            self._last_table = node_table
-            self._sync_count += 1
-            self._last_sync_time = datetime.now()
-            self.bridge.push_batch_sync(node_table, "node")
-        
-        # 2. 엣지(관계) 동기화
-        if HAS_SERIALIZER:
-            edge_table = GraphSerializer.edges_to_table(self.left_brain.nodes)
-            if edge_table and edge_table.num_rows > 0:
-                self.bridge.push_batch_sync(edge_table, "relation")
-                print(f"💾 Sync: Nodes({node_table.num_rows if node_table else 0}), Edges({edge_table.num_rows}) 완료")
-                return True
-        
-        return node_table is not None
-
-    def get_bridge_status(self) -> Dict[str, Any]:
-        """브릿지 상태 정보 반환"""
+    def get_sync_stats(self) -> Dict[str, Any]:
+        """동기화 통계 반환"""
         return {
-            "bridge_active": self.bridge is not None,
-            "bridge_connected": self._bridge_connected,
-            "arrow_available": HAS_ARROW,
-            "schema_available": HAS_SCHEMA,
-            "last_sync_time": str(self._last_sync_time) if self._last_sync_time else None,
+            "surreal_connected": self._bridge_connected,
+            "lance_connected": self._vector_connected,
+            "last_sync_time": self._last_sync_time.isoformat() if self._last_sync_time else None,
             "sync_count": self._sync_count,
-            "last_batch_rows": self._last_batch.num_rows if self._last_batch else 0,
-            "last_table_rows": self._last_table.num_rows if self._last_table else 0
+            "last_synced_evolution_index": self._last_synced_evolution_index,
         }
-
-    async def close_bridge(self):
-        """브릿지 연결 종료"""
-        if self.bridge and self._bridge_connected:
-            try:
-                await self.bridge.close()
-                self._bridge_connected = False
-                print("🔌 CorpusCallosum: 브릿지 연결 종료")
-            except Exception as e:
-                print(f"⚠️ 브릿지 종료 중 오류: {e}")
