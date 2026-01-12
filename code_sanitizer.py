@@ -19,8 +19,8 @@ from typing import Tuple, List
 # 📌 상수 정의 - 감지 패턴
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Git 충돌 마커
-CONFLICT_MARKERS = ['<<<<<<<', '>>>>>>>']
+# Git 충돌 마커 (모든 마커 포함)
+CONFLICT_MARKERS = ['<<<<<<<', '=======', '>>>>>>>']
 
 # 코드 생략 패턴 (정교하게 설계 - 일반 주석과 구분)
 OMISSION_PATTERNS = [
@@ -77,29 +77,38 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
             print("🔧 [Sanitizer] '''를 ```로 자동 치환함")
     
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 2: Git 충돌 마커 자동 제거
+    # Step 2: Git 충돌 마커 자동 제거 (더 포괄적인 검사)
     # ─────────────────────────────────────────────────────────────────────────
     lines = code_output.split('\n')
     cleaned_lines = []
     
     for line in lines:
         stripped = line.strip()
+        should_remove = False
         
-        # 충돌 시작/끝 마커 건너뛰기
-        if stripped.startswith('<<<<<<<') or stripped.startswith('>>>>>>>'):
+        # 충돌 시작/끝 마커 건너뛰기 (줄 어디에 있든)
+        if '<<<<<<<' in line or '>>>>>>>' in line:
             if verbose:
                 print(f"🔧 [Sanitizer] 충돌 마커 제거: {stripped[:40]}...")
             result["removed_lines"] += 1
-            continue
+            should_remove = True
         
-        # ======= 구분선 건너뛰기
-        if stripped == '=======' or stripped.startswith('======='):
+        # ======= 구분선 건너뛰기 (정확히 7개의 = 또는 그 이상)
+        elif '=======' in stripped and stripped.replace('=', '').strip() == '':
             if verbose:
                 print("🔧 [Sanitizer] 충돌 구분선 제거")
             result["removed_lines"] += 1
-            continue
+            should_remove = True
         
-        cleaned_lines.append(line)
+        # 줄 전체가 충돌 마커인 경우
+        elif stripped in ['<<<<<<<', '=======', '>>>>>>>']:
+            if verbose:
+                print(f"🔧 [Sanitizer] 순수 충돌 마커 제거: {stripped}")
+            result["removed_lines"] += 1
+            should_remove = True
+        
+        if not should_remove:
+            cleaned_lines.append(line)
     
     if result["removed_lines"] > 0:
         code_output = '\n'.join(cleaned_lines)
