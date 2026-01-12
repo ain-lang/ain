@@ -149,19 +149,48 @@ class GitHubClient:
             
             # 🔍 원격 HEAD 확인 (실제로 푸시되었는지 검증)
             try:
-                remote_head = subprocess.run(
+                ls_result = subprocess.run(
                     [git_path, "ls-remote", remote_url, f"refs/heads/{branch}"],
                     capture_output=True, text=True, timeout=10
-                ).stdout.strip().split()[0] if True else ""
+                )
+                remote_head = ls_result.stdout.strip().split()[0] if ls_result.stdout.strip() else ""
                 
                 if remote_head and new_sha and remote_head != new_sha:
-                    print(f"⚠️ 원격 HEAD({remote_head[:8]})와 로컬({new_sha[:8]})이 다름!")
-                    debug["stages"].append(f"push: remote mismatch ({remote_head[:8]} != {new_sha[:8]})")
-                    debug["remote_head"] = remote_head
-                    debug["local_head"] = new_sha
-                    return True, "변경사항 없음 (푸시 미반영)", None, debug
-                print(f"✅ 원격 HEAD 확인: {remote_head[:8] if remote_head else 'N/A'}")
-                debug["stages"].append(f"push: verified ({remote_head[:8] if remote_head else 'N/A'})")
+                    print(f"⚠️ 원격 HEAD({remote_head[:8]})와 로컬({new_sha[:8]})이 다름! Force Push 시도...")
+                    debug["stages"].append(f"mismatch: {remote_head[:8]} != {new_sha[:8]}")
+                    
+                    # 🚀 Force Push 재시도 (Railway 환경 대응)
+                    force_result = subprocess.run(
+                        [git_path, "push", "--force", remote_url, f"HEAD:{branch}"],
+                        capture_output=True, text=True
+                    )
+                    print(f"📤 Force Push 결과: code={force_result.returncode}")
+                    print(f"   stderr: {force_result.stderr[:200] if force_result.stderr else '(empty)'}")
+                    
+                    if force_result.returncode == 0:
+                        # 재확인
+                        verify = subprocess.run(
+                            [git_path, "ls-remote", remote_url, f"refs/heads/{branch}"],
+                            capture_output=True, text=True, timeout=10
+                        )
+                        verify_head = verify.stdout.strip().split()[0] if verify.stdout.strip() else ""
+                        if verify_head == new_sha:
+                            print(f"✅ Force Push 성공! 원격 HEAD: {verify_head[:8]}")
+                            debug["stages"].append(f"force-push: success ({new_sha[:8]})")
+                        else:
+                            debug["stages"].append(f"force-push: failed (still {verify_head[:8]})")
+                            debug["remote_head"] = verify_head
+                            debug["local_head"] = new_sha
+                            return True, "변경사항 없음 (푸시 미반영)", None, debug
+                    else:
+                        debug["stages"].append(f"force-push: error ({force_result.returncode})")
+                        debug["force_error"] = force_result.stderr[:200]
+                        debug["remote_head"] = remote_head
+                        debug["local_head"] = new_sha
+                        return True, "변경사항 없음 (푸시 미반영)", None, debug
+                else:
+                    print(f"✅ 원격 HEAD 확인: {remote_head[:8] if remote_head else 'N/A'}")
+                    debug["stages"].append(f"push: verified ({remote_head[:8] if remote_head else 'N/A'})")
             except Exception as verify_err:
                 print(f"⚠️ 원격 확인 실패: {verify_err}")
 
