@@ -43,6 +43,23 @@ class GitHubClient:
         
         if not self.token or len(self.token) < 10:
             return False, f"❌ GitHub 토큰 없음 또는 너무 짧음 ({token_info})", None, debug
+        
+        # 🔐 GitHub API로 토큰 권한 확인
+        try:
+            if self.github:
+                user = self.github.get_user()
+                scopes = self.github.oauth_scopes or []
+                debug["github_user"] = user.login
+                debug["github_scopes"] = scopes
+                print(f"✅ GitHub API 인증 성공: {user.login}, scopes={scopes}")
+                
+                # repo 스코프 확인
+                if 'repo' not in scopes and 'public_repo' not in scopes:
+                    debug["push_issue"] = f"토큰에 repo 스코프 없음: {scopes}"
+                    return False, f"❌ 토큰에 push 권한(repo 스코프) 없음: {scopes}", None, debug
+        except Exception as api_err:
+            debug["github_api_error"] = str(api_err)[:100]
+            print(f"⚠️ GitHub API 인증 실패: {api_err}")
 
         try:
             # 1. 안전한 디렉토리 설정 (Docker/Railway 환경 대응 핵심!)
@@ -139,8 +156,10 @@ class GitHubClient:
             )
             
             print(f"📤 푸시 결과: code={push_result.returncode}")
-            print(f"   stdout: {push_result.stdout[:200] if push_result.stdout else '(empty)'}")
-            print(f"   stderr: {push_result.stderr[:200] if push_result.stderr else '(empty)'}")
+            print(f"   stdout: {push_result.stdout[:300] if push_result.stdout else '(empty)'}")
+            print(f"   stderr: {push_result.stderr[:300] if push_result.stderr else '(empty)'}")
+            debug["push_stdout"] = push_result.stdout[:300] if push_result.stdout else ""
+            debug["push_stderr"] = push_result.stderr[:300] if push_result.stderr else ""
             
             # 푸시 실패 시 pull 후 재시도 (한 번만)
             if push_result.returncode != 0:
@@ -196,12 +215,28 @@ class GitHubClient:
                             debug["push_issue"] = "토큰 권한 확인 필요 (push 성공했으나 원격 미반영)"
                             debug["remote_head"] = verify_head
                             debug["local_head"] = new_sha
+                            
+                            # 🔄 GitHub API로 대안 시도
+                            print("🔄 Force push 무효, GitHub API로 대안 시도...")
+                            api_result = self._push_via_api(git_path, message, branch)
+                            if api_result:
+                                debug["stages"].append("api-push: success")
+                                return True, "✅ GitHub API로 동기화 성공", api_result, debug
+                            
                             return True, f"푸시 실패: 토큰 권한 확인 필요", None, debug
                     else:
                         debug["stages"].append(f"force-push: error ({force_result.returncode})")
                         debug["push_issue"] = force_result.stderr[:200] if force_result.stderr else "unknown"
                         debug["remote_head"] = remote_head
                         debug["local_head"] = new_sha
+                        
+                        # 🚨 Git push 완전 실패 - GitHub API로 대안 시도
+                        print("🔄 Git push 실패, GitHub API로 대안 시도...")
+                        api_result = self._push_via_api(git_path, message, branch)
+                        if api_result:
+                            debug["stages"].append("api-push: success")
+                            return True, "✅ GitHub API로 동기화 성공", api_result, debug
+                        
                         return True, f"푸시 실패: {force_result.stderr[:100]}", None, debug
                 else:
                     print(f"✅ 원격 HEAD 확인: {remote_head[:8] if remote_head else 'N/A'}")
@@ -225,6 +260,58 @@ class GitHubClient:
         except Exception as e:
             debug["stages"].append(f"error: {str(e)[:50]}")
             return False, f"❌ Git Push 실패: {str(e)}", None, debug
+    
+    def _push_via_api(self, git_path: str, message: str, branch: str) -> str | None:
+        """Git push 실패 시 GitHub API로 대안 시도"""
+        try:
+            if not self.repo:
+                print("❌ GitHub API repo 객체 없음")
+                return None
+            
+            import subprocess
+            
+            # 변경된 파일 목록 가져오기
+            diff_result = subprocess.run(
+                [git_path, "diff", "--name-only", f"origin/{branch}"],
+                capture_output=True, text=True
+            )
+            changed_files = [f.strip() for f in diff_result.stdout.strip().split('\n') if f.strip()]
+            
+            if not changed_files:
+                print("⚠️ API push: 변경된 파일 없음")
+                return None
+            
+            print(f"📤 API push: {len(changed_files)} files")
+            
+            # 파일별로 업데이트 (최대 5개만)
+            for filepath in changed_files[:5]:
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # 기존 파일 SHA 가져오기
+                    try:
+                        existing = self.repo.get_contents(filepath, ref=branch)
+                        sha = existing.sha
+                    except:
+                        sha = None
+                    
+                    if sha:
+                        self.repo.update_file(filepath, f"🧬 {message}", content, sha, branch=branch)
+                    else:
+                        self.repo.create_file(filepath, f"🧬 {message}", content, branch=branch)
+                    
+                    print(f"  ✅ {filepath}")
+                except Exception as file_err:
+                    print(f"  ❌ {filepath}: {file_err}")
+            
+            # 최신 커밋 SHA 반환
+            ref = self.repo.get_git_ref(f"heads/{branch}")
+            return ref.object.sha
+            
+        except Exception as e:
+            print(f"❌ API push 실패: {e}")
+            return None
     
     def get_commit_url(self, sha: str) -> str:
         """커밋 URL 생성"""

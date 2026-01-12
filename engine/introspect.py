@@ -140,7 +140,13 @@ class IntrospectMixin:
                             issue = debug.get('push_issue', '')
                             if issue:
                                 token_info = debug.get('token_info', 'N/A')
-                                self.send_telegram_msg(f"🚨 푸시 실패! ({', '.join(applied)})\n📊 {stages}\n🔑 {token_info}\n⚠️ {issue[:200]}")
+                                scopes = debug.get('github_scopes', 'N/A')
+                                api_err = debug.get('github_api_error', '')
+                                push_err = debug.get('push_stderr', '')[:100]
+                                extra = f"\n🔐 scopes={scopes}" if scopes != 'N/A' else ""
+                                extra += f"\n❌ API: {api_err}" if api_err else ""
+                                extra += f"\n📤 stderr: {push_err}" if push_err else ""
+                                self.send_telegram_msg(f"🚨 푸시 실패! ({', '.join(applied)})\n📊 {stages}\n🔑 {token_info}{extra}\n⚠️ {issue[:150]}")
                             else:
                                 debug_str = f"\n📊 diff: {debug.get('diff_stat', 'N/A')[:100]}"
                                 self.send_telegram_msg(f"✨ 진화 완료! ({', '.join(applied)}) - 변경사항 없음\n📊 {stages}{debug_str}")
