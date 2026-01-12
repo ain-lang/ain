@@ -1,0 +1,11 @@
+google-generativeai
+pygithub
+requests
+surrealdb>=1.0.0
+pyarrow>=14.0.1
+numpy>=1.24.0
+pandas>=2.0.0
+python-dotenv
+redis
+lancedb>=0.4.0
+mojo
