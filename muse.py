@@ -141,7 +141,7 @@ class Muse:
 - **이미 구현된 기능을 다시 제안하지 마라.** 코드에 해당 함수/클래스가 존재하면 "이미 완료됨"으로 판단하라.
 - nexus.py에 이미 구현된 것들: recall_memories(), _store_to_vector_db(), _text_to_simple_embedding(), record_evolution() Dual-Write
 - database/lance_bridge.py에 이미 구현된 것들: LanceBridge 클래스, add_memory(), search_memory()
-- **같은 파일에 같은 기능을 반복 구현하지 마라.** 새로운 기능이나 다른 파일로 확장하라.
+- **같은 파일에 같은 기능을 반복 구현하지 마라.**
 
 [📜 최근 5회 진화 기록 - 이 파일들은 피하라!]
 {recent_evolutions}
