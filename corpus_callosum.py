@@ -628,3 +628,34 @@ class CorpusCallosum:
             "sync_count": self._sync_count,
             "last_synced_evolution_index": self._last_synced_evolution_index,
         }
+    
+    def get_bridge_status(self) -> Dict[str, Any]:
+        """브릿지 상태 정보 반환 (하위 호환성)"""
+        return {
+            "bridge_active": self.bridge is not None,
+            "bridge_connected": self._bridge_connected,
+            "vector_connected": self._vector_connected,
+            "arrow_available": HAS_ARROW,
+            "lance_available": HAS_LANCE,
+            "last_sync_time": str(self._last_sync_time) if self._last_sync_time else None,
+            "sync_count": self._sync_count,
+            "last_batch_rows": self._last_batch.num_rows if self._last_batch else 0,
+            "last_table_rows": self._last_table.num_rows if self._last_table else 0,
+        }
+    
+    def sync_facts_to_surreal(self) -> bool:
+        """FactCore 동기화 (하위 호환성 - 동기 버전)"""
+        if not self.bridge or not self._bridge_connected:
+            return False
+        
+        try:
+            node_table = self.format_fact_for_surreal()
+            if node_table:
+                self.bridge.push_batch_sync(node_table, "node")
+                self._sync_count += 1
+                self._last_sync_time = datetime.now()
+                return True
+            return False
+        except Exception as e:
+            print(f"❌ sync_facts_to_surreal 실패: {e}")
+            return False
