@@ -187,53 +187,31 @@ class Muse:
         # 3. [Coder - Claude 4.5 Opus] 실제 코드 구현
         print(f"💻 Coder (Claude 4.5 Opus)가 코드를 작성 중...")
         coder_prompt = f"""
-너는 AIN의 최고 선임 개발자(Coder)다. 아래 설계도(Dreamer's Intent)를 바탕으로 실제 작동하는 코드를 작성하라.
+너는 AIN의 최고 선임 개발자(Coder)다. **파일의 일부만 수정하거나 diff 형식을 사용하는 것은 절대 금지된다.** 
+오직 **파일 전체 내용(Full Code)**을 처음부터 끝까지 정확하게 출력하라.
+
+[반드시 지켜야 할 출력 규격]
+FILE: 파일명.py
+```python
+# 여기에 파일 전체 내용을 처음부터 끝까지 작성 (생략 금지)
+```
+
+[🚨 절대 금지 사항]
+- **일부 수정 금지**: `<<<<<<<`, `=======`, `>>>>>>>` 같은 충돌 마커 사용 금지.
+- **Diff 형식 금지**: 행 앞에 `+` 또는 `-`를 붙여서 수정된 부분만 보여주는 형식 절대 금지.
+- **생략 금지**: `# ... (기존 코드와 동일) ...` 같은 식으로 내용을 생략하지 마라. 반드시 전체 파일을 출력하라.
+
+[코딩 가이드라인]
+1. 설계도(Dreamer's Intent)를 바탕으로 기능을 완벽하게 구현하라.
+2. **Git 충돌 마커(`<<<<<<<`, `=======`, `>>>>>>>`)와 `+`/`-` 기호는 절대 사용 금지.**
+3. 파일 상단에 모듈 설명을 포함한 주석을 반드시 작성하라.
+4. 한 번에 **1개 파일**만, **100줄 이내**로 작게 구현하라.
 
 [Dreamer's Intent]
 {intent_design}
 
-[현재 시스템 컨텍스트 요약]
+[참조용 현재 코드 스냅샷]
 {compressed_code}
-
-[코딩 규칙 - 매우 중요!]
-1. **반드시** 아래 형식을 정확히 따라라.
-2. "FILE:" 마커는 줄의 맨 앞에, 공백 없이 작성하라.
-3. 코드 블록은 **반드시 백틱 세 개(```)로 감싸라**.
-4. 한 번에 1개 파일만 수정하라 (작은 단위로 진화).
-5. snake_case 사용, database/ 폴더 활용.
-
-[🚨 절대 금지 - 위반 시 거부됨!]
-- **Git 충돌 마커 금지**: <<<<<<<, =======, >>>>>>> 절대 사용 금지!
-- **diff 형식 금지**: +/- 로 시작하는 diff 형식 사용 금지!
-- **파일 전체를 새로 작성**하라. 일부분만 수정하는 형식으로 표현하지 마라.
-
-[🏗️ 모듈 크기 제한 - 절대 준수!]
-- **파일당 100줄 이하** 권장 (최대 150줄, 200줄 넘으면 오류!)
-- 새 기능은 **별도 파일**로 생성 (utils/new_helper.py 등)
-- 기존 파일에는 **import 한 줄만** 추가
-
-[📝 주석 필수 - 반드시 작성!]
-- **파일 상단**: triple quotes로 모듈 설명
-- **클래스/함수**: 역할, 파라미터, 반환값 설명
-- **복잡한 로직**: # 인라인 주석으로 동작 설명
-
-[✅ 수정 가능한 파일]
-- nexus/*.py, engine/*.py, corpus/*.py, facts/*.py
-- database/*.py, api/*.py, 새로 생성하는 파일
-
-[출력 예시]
-FILE: utils/new_helper.py
-```python
-# 새 헬퍼 모듈: (목적 설명)
-
-def example_function(param: str) -> bool:
-    # 함수 설명: (목적)
-    # Args: param - 파라미터 설명
-    # Returns: 반환값 설명
-    
-    # 로직 설명 주석
-    return True
-```
 """
         # 🔄 Coder 재시도 로직 (최대 3회)
         MAX_CODER_RETRIES = 3
@@ -267,10 +245,17 @@ def example_function(param: str) -> bool:
                 code_output = code_output.replace("'''", "```")
                 print("🔄 [Muse] '''를 ```로 자동 치환함")
             
-            # 🚨 Git 충돌 마커 검사 (모든 마커 포함)
-            if '<<<<<<<' in code_output or '=======' in code_output or '>>>>>>>' in code_output:
-                last_error = "Git 충돌 마커(<<<<<<<, =======, >>>>>>>)가 코드에 포함됨. 전체 파일을 새로 작성하라. diff 형식 금지!"
-                print(f"🚨 [Muse] Git 충돌 마커 감지! 재시도...")
+            # 🚨 Git 충돌 마커 및 Diff 형식 검사
+            has_conflict = any(marker in code_output for marker in ['<<<<<<<', '=======', '>>>>>>>'])
+            # 행 시작이 + 또는 -로 시작하는 줄이 많은지 확인 (diff 형식 감지)
+            lines = code_output.split('\n')
+            diff_lines = [l for l in lines if l.startswith('+') or l.startswith('-')]
+            is_diff_format = len(diff_lines) > 5 # 단순히 한두 줄이 아니라 여러 줄이 diff 형식이면
+
+            if has_conflict or is_diff_format:
+                last_error = "Git 충돌 마커(<<<<<<<, =======, >>>>>>>) 또는 diff 형식(+/-)이 감지되었습니다. " \
+                             "일부분만 수정하는 diff 형식을 절대 사용하지 말고, 파일 전체 내용을 처음부터 끝까지 새로 작성하라."
+                print(f"🚨 [Muse] 부적절한 형식(Conflict/Diff) 감지! 재시도...")
                 continue
             
             # 🚨 구문 검사 (Python 파일)
