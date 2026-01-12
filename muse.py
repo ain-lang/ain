@@ -202,6 +202,11 @@ class Muse:
 4. 한 번에 1개 파일만 수정하라 (작은 단위로 진화).
 5. snake_case 사용, database/ 폴더 활용.
 
+[🚨 절대 금지 - 위반 시 거부됨!]
+- **Git 충돌 마커 금지**: <<<<<<<, =======, >>>>>>> 절대 사용 금지!
+- **diff 형식 금지**: +/- 로 시작하는 diff 형식 사용 금지!
+- **파일 전체를 새로 작성**하라. 일부분만 수정하는 형식으로 표현하지 마라.
+
 [🏗️ 모듈 크기 제한 - 절대 준수!]
 - **파일당 100줄 이하** 권장 (최대 150줄, 200줄 넘으면 오류!)
 - 새 기능은 **별도 파일**로 생성 (utils/new_helper.py 등)
@@ -262,9 +267,9 @@ def example_function(param: str) -> bool:
                 code_output = code_output.replace("'''", "```")
                 print("🔄 [Muse] '''를 ```로 자동 치환함")
             
-            # 🚨 Git 충돌 마커 검사
-            if '<<<<<<<' in code_output or '>>>>>>>' in code_output:
-                last_error = "Git 충돌 마커(<<<<<<<, >>>>>>>)가 코드에 포함됨. 이 마커들을 제거하고 깨끗한 코드만 작성하라."
+            # 🚨 Git 충돌 마커 검사 (모든 마커 포함)
+            if '<<<<<<<' in code_output or '=======' in code_output or '>>>>>>>' in code_output:
+                last_error = "Git 충돌 마커(<<<<<<<, =======, >>>>>>>)가 코드에 포함됨. 전체 파일을 새로 작성하라. diff 형식 금지!"
                 print(f"🚨 [Muse] Git 충돌 마커 감지! 재시도...")
                 continue
             
