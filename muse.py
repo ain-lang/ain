@@ -143,17 +143,22 @@ class Muse:
 - database/lance_bridge.py에 이미 구현된 것들: LanceBridge 클래스, add_memory(), search_memory()
 - **같은 파일에 같은 기능을 반복 구현하지 마라.** 새로운 기능은 별도 파일로 생성하라.
 
-[🏗️ 파일 크기 제한 - 절대 준수!]
-**⚠️ 200줄 이상 파일은 직접 수정하지 마라!**
-1. 새 기능은 **별도의 새 파일**로 생성하라 (예: utils/helper.py, database/new_module.py)
-2. 기존 파일에는 **import 한 줄만** 추가하라
-3. 200줄 이상 코드를 한 번에 출력하면 **토큰 한계로 잘려서 오류** 발생
+[🏗️ 모듈 설계 원칙 - 절대 준수!]
+**⚠️ 작은 모듈 단위로 설계하라!**
+1. **파일당 100줄 이하** 권장 (최대 150줄)
+2. **단일 책임 원칙**: 한 파일에 한 가지 기능만
+3. 새 기능은 **별도 파일**로 생성 (예: utils/helper.py, database/new_module.py)
+4. 기존 파일에는 **import 한 줄만** 추가
+
+[📝 주석/문서화 - 필수!]
+**모든 코드에 설명 주석을 반드시 작성하라:**
+1. **파일 상단**: 모듈 설명 docstring ("""...""")
+2. **클래스**: 역할과 책임 설명
+3. **함수/메서드**: 목적, 파라미터, 반환값 설명
+4. **복잡한 로직**: 인라인 주석으로 동작 설명
 
 **수정 가능한 파일 (모두 150줄 이하 모듈):**
-- nexus/*.py (core.py, memory.py, history.py, arrow.py, storage.py)
-- engine/*.py (core.py, sync.py, evolution.py, handlers.py, introspect.py, loop.py)
-- corpus/*.py (core.py, hydration.py, sync.py, transform.py)
-- facts/*.py (node.py, core.py, storage.py, graph.py, snapshot.py)
+- nexus/*.py, engine/*.py, corpus/*.py, facts/*.py (모듈화 완료)
 - database/*.py, api/*.py
 - 새로 생성하는 파일 (utils/*.py 등)
 
@@ -191,34 +196,44 @@ class Muse:
 {compressed_code}
 
 [코딩 규칙 - 매우 중요!]
-1. **반드시** 아래 형식을 정확히 따라라. 설명 없이 코드만 출력하라.
-
-FILE: 파일명.py
-```python
-# 여기에 전체 코드 작성 (일부 수정이 아닌 파일 전체 내용을 작성할 것)
-```
-
-2. "FILE:" 마커는 **반드시** 줄의 맨 앞에, 공백이나 기호 없이 작성하라.
-3. 코드 블록은 **반드시 백틱 세 개(```)로 감싸라**. 작은따옴표(''')는 절대 사용하지 마라.
+1. **반드시** 아래 형식을 정확히 따라라.
+2. "FILE:" 마커는 줄의 맨 앞에, 공백 없이 작성하라.
+3. 코드 블록은 **반드시 백틱 세 개(```)로 감싸라**.
 4. 한 번에 1개 파일만 수정하라 (작은 단위로 진화).
-5. 아키텍처 가이드를 준수하라 (database/ 폴더 활용, snake_case 사용).
-6. 응답의 맨 처음에 "FILE:"로 시작하라. 부가 설명은 코드 뒤에 배치하라.
+5. snake_case 사용, database/ 폴더 활용.
 
-[🚨 파일 크기 제한 - 절대 준수!]
-- **200줄 이상 코드 출력 금지** (토큰 한계로 잘림 → 오류 발생)
-- 새 기능은 **별도 파일**로 생성하라 (예: utils/new_helper.py)
-- 기존 파일에는 **import 한 줄만** 추가하라
+[🏗️ 모듈 크기 제한 - 절대 준수!]
+- **파일당 100줄 이하** 권장 (최대 150줄, 200줄 넘으면 오류!)
+- 새 기능은 **별도 파일**로 생성 (utils/new_helper.py 등)
+- 기존 파일에는 **import 한 줄만** 추가
 
-[✅ 수정 가능한 파일 (150줄 이하 모듈)]
-- nexus/*.py, engine/*.py, corpus/*.py, facts/*.py (모듈화 완료)
-- database/*.py, api/*.py
-- 새로 생성하는 파일 (utils/*.py 등)
+[📝 주석 필수 - 반드시 작성!]
+- **파일 상단**: """모듈 설명 docstring"""
+- **클래스/함수**: 역할, 파라미터, 반환값 설명
+- **복잡한 로직**: # 인라인 주석으로 동작 설명
 
-[출력 예시 - 이대로만 출력하라]
-FILE: example_file.py
+[✅ 수정 가능한 파일]
+- nexus/*.py, engine/*.py, corpus/*.py, facts/*.py
+- database/*.py, api/*.py, 새로 생성하는 파일
+
+[출력 예시]
+FILE: utils/new_helper.py
 ```python
-import os
-# ... full code ...
+"""
+새 헬퍼 모듈: (목적 설명)
+"""
+
+def example_function(param: str) -> bool:
+    """
+    함수 설명.
+    
+    Args:
+        param: 파라미터 설명
+    Returns:
+        반환값 설명
+    """
+    # 로직 설명 주석
+    return True
 ```
 """
         coder_result = self.coder_client.chat([
