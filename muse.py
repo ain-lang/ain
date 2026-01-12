@@ -144,13 +144,15 @@ class Muse:
 - **같은 파일에 같은 기능을 반복 구현하지 마라.** 새로운 기능은 별도 파일로 생성하라.
 
 [🏗️ 대형 파일 진화 방법]
-아직 분리되지 않은 대형 파일들(ain_engine.py, corpus_callosum.py, fact_core.py)에 기능을 추가할 때:
+아직 분리되지 않은 대형 파일(fact_core.py)에 기능을 추가할 때:
 1. **새 파일 생성**: database/*.py, utils/*.py 등에 새 모듈 작성
 2. **기존 파일에서 import**: 대형 파일에서는 import 한 줄만 추가
 3. 대형 파일 전체를 다시 작성하지 마라 (토큰 한계로 불완전해짐)
 
 **수정 가능한 파일:**
 - nexus/*.py (모듈화 완료: core.py, memory.py, history.py, arrow.py, storage.py)
+- engine/*.py (모듈화 완료: core.py, sync.py, evolution.py, handlers.py, introspect.py, loop.py)
+- corpus/*.py (모듈화 완료: core.py, hydration.py, sync.py, transform.py)
 - database/*.py, api/*.py
 - 200줄 이하의 모든 파일
 
@@ -202,12 +204,14 @@ FILE: 파일명.py
 6. 응답의 맨 처음에 "FILE:"로 시작하라. 부가 설명은 코드 뒤에 배치하라.
 
 [🚨 대형 파일 규칙]
-- ain_engine.py, corpus_callosum.py, fact_core.py는 300줄+ 대형 파일이다.
-- 이 파일들을 **전체 재작성하지 마라** (토큰 한계로 불완전해짐).
+- fact_core.py는 300줄+ 대형 파일이다.
+- 이 파일을 **전체 재작성하지 마라** (토큰 한계로 불완전해짐).
 - 대신 **새 파일 생성** 후 기존 파일에서 import로 연결하라.
 
 [✅ 수정 가능한 파일]
 - nexus/*.py (모듈화 완료)
+- engine/*.py (모듈화 완료)
+- corpus/*.py (모듈화 완료)
 - database/*.py, api/*.py
 - 200줄 이하 파일
 
