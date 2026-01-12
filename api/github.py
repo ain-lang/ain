@@ -58,8 +58,16 @@ class GitHubClient:
             subprocess.run([git_path, "config", "--global", "user.email", "ain@evolution.ai"], check=True)
             subprocess.run([git_path, "config", "--global", "user.name", "AIN Core"], check=True)
             
-            # 5. 최신 상태로 pull (conflict 방지)
-            subprocess.run([git_path, "pull", remote_url, branch, "--rebase"], check=False)
+            # 5. 최신 상태로 pull (conflict 발생 시 중단하고 현재 변경사항 우선)
+            pull_result = subprocess.run(
+                [git_path, "pull", remote_url, branch, "--no-rebase", "--strategy-option=theirs"],
+                capture_output=True, text=True
+            )
+            # 충돌 발생 시 rebase 중단하고 현재 상태 유지
+            if pull_result.returncode != 0:
+                subprocess.run([git_path, "rebase", "--abort"], check=False)
+                subprocess.run([git_path, "merge", "--abort"], check=False)
+                print(f"⚠️ Pull 충돌 발생, 로컬 변경사항 우선 적용")
             
             subprocess.run([git_path, "add", "."], check=True)
             
