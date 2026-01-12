@@ -167,6 +167,10 @@ class GitHubClient:
                     print(f"📤 Force Push 결과: code={force_result.returncode}")
                     print(f"   stderr: {force_result.stderr[:200] if force_result.stderr else '(empty)'}")
                     
+                    # Force push stdout/stderr 기록
+                    debug["force_stdout"] = force_result.stdout[:300] if force_result.stdout else ""
+                    debug["force_stderr"] = force_result.stderr[:300] if force_result.stderr else ""
+                    
                     if force_result.returncode == 0:
                         # 재확인
                         verify = subprocess.run(
@@ -178,16 +182,18 @@ class GitHubClient:
                             print(f"✅ Force Push 성공! 원격 HEAD: {verify_head[:8]}")
                             debug["stages"].append(f"force-push: success ({new_sha[:8]})")
                         else:
-                            debug["stages"].append(f"force-push: failed (still {verify_head[:8]})")
+                            # 🚨 returncode=0인데 원격이 안 바뀜 = 토큰 권한 문제
+                            debug["stages"].append(f"force-push: NO EFFECT (still {verify_head[:8]})")
+                            debug["push_issue"] = "토큰 권한 확인 필요 (push 성공했으나 원격 미반영)"
                             debug["remote_head"] = verify_head
                             debug["local_head"] = new_sha
-                            return True, "변경사항 없음 (푸시 미반영)", None, debug
+                            return True, f"푸시 실패: 토큰 권한 확인 필요", None, debug
                     else:
                         debug["stages"].append(f"force-push: error ({force_result.returncode})")
-                        debug["force_error"] = force_result.stderr[:200]
+                        debug["push_issue"] = force_result.stderr[:200] if force_result.stderr else "unknown"
                         debug["remote_head"] = remote_head
                         debug["local_head"] = new_sha
-                        return True, "변경사항 없음 (푸시 미반영)", None, debug
+                        return True, f"푸시 실패: {force_result.stderr[:100]}", None, debug
                 else:
                     print(f"✅ 원격 HEAD 확인: {remote_head[:8] if remote_head else 'N/A'}")
                     debug["stages"].append(f"push: verified ({remote_head[:8] if remote_head else 'N/A'})")

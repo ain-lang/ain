@@ -136,13 +136,18 @@ class IntrospectMixin:
                             self.send_telegram_msg(f"🛠️ 진화 완료! ({', '.join(applied)}){debug_str}\n{commit_url}")
                         else:
                             # ⚠️ 변경사항 없음 - 원인 표시
-                            debug_str = f"\n📊 diff: {debug.get('diff_stat', 'N/A')[:100]}"
                             stages = ' → '.join(debug.get('stages', []))
-                            self.send_telegram_msg(f"✨ 진화 완료! ({', '.join(applied)}) - 변경사항 없음\n📊 {stages}{debug_str}")
+                            issue = debug.get('push_issue', '')
+                            if issue:
+                                self.send_telegram_msg(f"🚨 푸시 실패! ({', '.join(applied)})\n📊 {stages}\n⚠️ {issue[:200]}")
+                            else:
+                                debug_str = f"\n📊 diff: {debug.get('diff_stat', 'N/A')[:100]}"
+                                self.send_telegram_msg(f"✨ 진화 완료! ({', '.join(applied)}) - 변경사항 없음\n📊 {stages}{debug_str}")
                     else:
                         safe_push_msg = push_msg.replace('`', "'").replace('*', '')[:150]
                         stages = ' → '.join(debug.get('stages', []))
-                        self.send_telegram_msg(f"⚠️ 로컬 반영됨, 푸시 실패: {safe_push_msg}\n📊 {stages}")
+                        issue = debug.get('push_issue', '')
+                        self.send_telegram_msg(f"⚠️ 로컬 반영됨, 푸시 실패: {safe_push_msg}\n📊 {stages}\n⚠️ {issue[:200] if issue else 'N/A'}")
                 except Exception as push_err:
                     safe_err = str(push_err).replace('`', "'").replace('*', '')[:100]
                     self.send_telegram_msg(f"⚠️ 커밋/푸시 오류: {safe_err}")
