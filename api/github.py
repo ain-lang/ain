@@ -43,19 +43,22 @@ class GitHubClient:
             subprocess.run([git_path, "config", "--global", "--unset", "credential.helper"], check=False)
             subprocess.run([git_path, "config", "--global", "credential.helper", ""], check=True)
             
-            # 3. .git 폴더가 없으면 clone (init 대신!)
+            # 3. .git 폴더가 없으면 init + remote 연결 (기존 파일 유지)
+            remote_url = f"https://{self.token}@github.com/{self.repo_name}.git"
             if not os.path.exists(".git"):
-                print("📂 .git 폴더가 없어 clone을 진행합니다.")
-                remote_url = f"https://{self.token}@github.com/{self.repo_name}.git"
-                # 현재 디렉토리에 clone
-                subprocess.run([git_path, "clone", remote_url, "."], check=True)
+                print("📂 .git 폴더가 없어 init + remote 연결을 진행합니다.")
+                subprocess.run([git_path, "init"], check=True)
+                subprocess.run([git_path, "remote", "add", "origin", remote_url], check=False)  # 이미 있으면 무시
+                # 원격 히스토리 가져오기 (현재 파일은 유지)
+                subprocess.run([git_path, "fetch", "origin", branch], check=False)
+                # 원격 브랜치와 연결 (현재 변경사항 유지하면서)
+                subprocess.run([git_path, "branch", "--set-upstream-to", f"origin/{branch}"], check=False)
             
             # 4. 유저 설정 (Global로 설정하여 안정성 확보)
             subprocess.run([git_path, "config", "--global", "user.email", "ain@evolution.ai"], check=True)
             subprocess.run([git_path, "config", "--global", "user.name", "AIN Core"], check=True)
             
             # 5. 최신 상태로 pull (conflict 방지)
-            remote_url = f"https://{self.token}@github.com/{self.repo_name}.git"
             subprocess.run([git_path, "pull", remote_url, branch, "--rebase"], check=False)
             
             subprocess.run([git_path, "add", "."], check=True)
