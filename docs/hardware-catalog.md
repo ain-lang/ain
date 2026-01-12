@@ -29,17 +29,37 @@
 | GoPiGo3 Kit (풀세트) | $229 | ~32만원 | 모든 것 포함 | ✅✅ |
 | Sphero RVR | $200-250 | ~28-35만원 | 튼튼함, SDK 우수 | ✅✅ |
 
-### 🦾 로봇 팔 (데스크탑)
+### 🦾 로봇 팔 (데스크탑) - [myCobot 공식](https://www.elephantrobotics.com/en/mycobot-en/)
 
 | 로봇 | 가격 (USD) | 가격 (KRW) | 특징 | Python 지원 |
 |------|-----------|-----------|------|-------------|
-| **myCobot 280 Arduino** ⭐ | $499 | ~70만원 | 6축, 컴팩트, 입문용 | ✅✅ pymycobot |
-| myCobot 280 M5 | $559 | ~78만원 | M5Stack 통합, 듀얼 디스플레이 | ✅✅✅ |
-| **myCobot 280 Raspberry Pi** | $679 | ~95만원 | 독립 실행 가능 (Ubuntu) | ✅✅✅ |
-| myCobot 280 Jetson Nano | $729 | ~102만원 | NVIDIA AI 가속 | ✅✅✅ |
+| **myCobot 280 for Arduino** | $599 | ~84만원 | 6축, 입문용, Arduino 호환 | ✅✅ pymycobot |
+| **myCobot 280 M5Stack** ⭐ | $649 | ~91만원 | 듀얼 디스플레이, M5Stack 생태계 | ✅✅✅ |
+| **myCobot 280 Raspberry Pi** | $799 | ~112만원 | 독립 실행 (Ubuntu), ROS 지원 | ✅✅✅ |
+| myCobot 280 Jetson Nano | $849 | ~119만원 | NVIDIA AI 가속 | ✅✅✅ |
 | myCobot 280 RDK X5 | $830 | ~116만원 | 10 TOPS AI, 최고급 | ✅✅✅ |
+| myCobot 320 Pi/M5 | $1,599+ | ~224만원+ | 1kg 페이로드, 320mm 반경 | ✅✅✅ |
+| myCobot Pro 630 | $2,000+ | ~280만원+ | 2kg 페이로드, 600mm 반경, 프로용 | ✅✅✅ |
 | Dobot Magician Lite | $400-500 | ~56-70만원 | 교육용 4축 | ✅✅ |
 | uArm Swift Pro | $300-400 | ~42-56만원 | 데스크탑 로봇 팔 | ✅✅ |
+
+> **myCobot 280 스펙**: 850g 무게, 250g 페이로드, 280mm 작업 반경, 6축  
+> **지원**: Python, C++, C#, JavaScript, ROS/ROS2, MoveIt, Drag&Teach
+
+### 🚗 복합 로봇 (로봇팔 + 이동형) - [LIMO COBOT](https://shop.elephantrobotics.com/collections/mycobot-280/products/limo-cobot)
+
+| 로봇 | 가격 (USD) | 가격 (KRW) | 특징 | Python 지원 |
+|------|-----------|-----------|------|-------------|
+| **LIMO COBOT** ⭐ | $4,500 | ~630만원 | myCobot 280 M5 + LIMO PRO 복합 | ✅✅✅ |
+| myAGV + myCobot | $1,500+ | ~210만원+ | AGV + 로봇팔 조합 | ✅✅ |
+
+> **LIMO COBOT 특징**:
+> - 🦾 **로봇팔**: myCobot 280 M5 (6축, 250g 페이로드)
+> - 🚗 **이동 베이스**: LIMO PRO (NVIDIA Orin Nano)
+> - 📷 **센서**: EAI T-mini Pro LiDAR + Orbbec Dabai 깊이 카메라 + IMU
+> - 🔄 **4가지 조향 모드**: Ackermann / 4륜 차동 / 트랙형 / 전방향(옴니)
+> - 🤖 **기능**: 자율 주행, SLAM 매핑, 장애물 회피, 이동 그래핑
+> - 💻 **지원**: ROS2, Gazebo, RViz, Python, C++
 
 ### 🐕 4족 보행 (고급)
 
@@ -171,11 +191,25 @@
 
 ### Option E: 풀 세트 (~150만원+)
 ```
-├── myCobot 280 RPi           ~95만원
+├── myCobot 280 RPi           ~112만원
 ├── PiCar-X (이동용)          ~25만원
 ├── Intel RealSense D435      ~44만원
 └── ReSpeaker + 스피커        ~15만원
 ```
+
+### Option F: 올인원 복합 로봇 (~630만원) 🔥 NEW
+```
+├── LIMO COBOT                ~630만원
+│   ├── myCobot 280 M5 (로봇팔)
+│   ├── LIMO PRO (이동 베이스, NVIDIA Orin Nano)
+│   ├── EAI T-mini Pro LiDAR
+│   ├── Orbbec Dabai 깊이 카메라
+│   └── IMU 센서
+└── (추가 악세서리)           ~20만원
+    ├── 그리퍼/석션펌프
+    └── 추가 배터리
+```
+> 🚀 **LIMO COBOT**: 자율 이동 + 로봇팔 + AI 비전이 하나로! ROS2 완벽 지원.
 
 ---
 
@@ -277,7 +311,9 @@ class AINVoice:
 ## 📚 참고 링크
 
 - [SunFounder PiCar-X](https://www.sunfounder.com/products/raspberry-pi-robot-car-kit-picar-x)
-- [Elephant Robotics myCobot](https://www.elephantrobotics.com/)
+- [Elephant Robotics 공식](https://www.elephantrobotics.com/)
+- [myCobot 280 시리즈](https://www.elephantrobotics.com/en/mycobot-en/) ⭐
+- [LIMO COBOT (복합 로봇)](https://shop.elephantrobotics.com/collections/mycobot-280/products/limo-cobot) ⭐
 - [Petoi Bittle](https://www.petoi.com/)
 - [Unitree Go2](https://www.unitree.com/go2/)
 - [Intel RealSense](https://www.intelrealsense.com/)
