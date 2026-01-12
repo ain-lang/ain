@@ -71,6 +71,9 @@ class GitHubClient:
             
             subprocess.run([git_path, "add", "."], check=True)
             
+            # 커밋 전 HEAD SHA 저장
+            old_sha = subprocess.check_output([git_path, "rev-parse", "HEAD"]).decode().strip()
+            
             result = subprocess.run(
                 [git_path, "commit", "-m", f"🧬 {message}"],
                 capture_output=True,
@@ -80,6 +83,17 @@ class GitHubClient:
             if "nothing to commit" in result.stdout or "nothing to commit" in result.stderr:
                 return True, "변경사항 없음 (이미 최신 상태입니다)", None
             
+            # 커밋 후 HEAD SHA 확인
+            new_sha = subprocess.check_output([git_path, "rev-parse", "HEAD"]).decode().strip()
+            
+            # 🚨 커밋이 실제로 생성되었는지 확인
+            if old_sha == new_sha:
+                print(f"⚠️ 커밋이 생성되지 않음 (SHA 변경 없음)")
+                print(f"   stdout: {result.stdout[:200]}")
+                print(f"   stderr: {result.stderr[:200]}")
+                return True, "변경사항 없음 (커밋 생성 안됨)", None
+            
+            print(f"✅ 새 커밋 생성됨: {new_sha[:8]}")
             print(f"🚀 GitHub로 푸시 시도 중: {self.repo_name} (branch: {branch})")
             
             # 6. 일반 푸시 (--force 제거! 히스토리 보존)
