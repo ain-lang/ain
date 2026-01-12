@@ -116,6 +116,10 @@ class GitHubClient:
                 text=True
             )
             
+            print(f"📤 푸시 결과: code={push_result.returncode}")
+            print(f"   stdout: {push_result.stdout[:200] if push_result.stdout else '(empty)'}")
+            print(f"   stderr: {push_result.stderr[:200] if push_result.stderr else '(empty)'}")
+            
             # 푸시 실패 시 pull 후 재시도 (한 번만)
             if push_result.returncode != 0:
                 print("⚠️ 푸시 실패, pull 후 재시도...")
@@ -125,9 +129,25 @@ class GitHubClient:
                     capture_output=True,
                     text=True
                 )
+                print(f"📤 재시도 결과: code={push_result.returncode}")
             
             if push_result.returncode != 0:
                 raise Exception(f"Push 실패: {push_result.stderr}")
+            
+            # 🔍 원격 HEAD 확인 (실제로 푸시되었는지 검증)
+            try:
+                remote_head = subprocess.run(
+                    [git_path, "ls-remote", remote_url, f"refs/heads/{branch}"],
+                    capture_output=True, text=True, timeout=10
+                ).stdout.strip().split()[0] if True else ""
+                
+                if remote_head and new_sha and remote_head != new_sha:
+                    print(f"⚠️ 원격 HEAD({remote_head[:8]})와 로컬({new_sha[:8]})이 다름!")
+                    # 원격 HEAD가 다르면 푸시가 실제로 안 된 것
+                    return True, "변경사항 없음 (푸시 미반영)", None
+                print(f"✅ 원격 HEAD 확인: {remote_head[:8] if remote_head else 'N/A'}")
+            except Exception as verify_err:
+                print(f"⚠️ 원격 확인 실패: {verify_err}")
 
             # 최종 SHA 확인 (이미 new_sha가 있으면 재사용)
             if not new_sha:
