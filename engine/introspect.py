@@ -42,7 +42,7 @@ class IntrospectMixin:
                 error_msg = imagination["error"]
                 if "429" in error_msg:
                     self.send_telegram_msg("🚨 **API Rate Limit Detected!**\n잠시 휴식 모드로 전환합니다. 5분 후에 다시 시도할게요.")
-                    self.current_interval = 1800  # 30분
+                    self.current_interval = 3600  # 1시간
                     self._save_current_state()
                 else:
                     self.send_telegram_msg(f"⚠️ **에러:** {error_msg}")
