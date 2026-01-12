@@ -146,4 +146,6 @@ class GitHubClient:
     
     def get_commit_url(self, sha: str) -> str:
         """커밋 URL 생성"""
+        if not sha:
+            return f"https://github.com/{self.repo_name}"  # SHA 없으면 레포 URL
         return f"https://github.com/{self.repo_name}/commit/{sha}"
