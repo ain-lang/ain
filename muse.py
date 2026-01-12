@@ -207,8 +207,8 @@ import ...
 [시스템 컨텍스트 (참고용)]
 {compressed_code}
 """
-        # 🔄 Coder 재시도 로직 (최대 3회)
-        MAX_CODER_RETRIES = 3
+        # 🔄 Coder 재시도 로직 (최대 5회)
+        MAX_CODER_RETRIES = 5
         last_error = None
         code_output = None
         
@@ -247,15 +247,28 @@ import ...
             diff_indicators = [l for l in lines if l.strip().startswith('+ ') or l.strip().startswith('- ')]
             is_diff_format = len(diff_indicators) > 3 or '@@ ' in code_output
             
-            # 🚨 내용 생략 감지 (# ... existing code ...)
-            omission_patterns = [r'#\s*\.\.\.', r'#\s*existing code', r'#\s*rest of', r'//\s*\.\.\.']
+            # 🚨 내용 생략 감지 (더 구체적인 패턴만)
+            omission_patterns = [
+                r'#\s*\.\.\.\s*existing',      # # ... existing
+                r'#\s*\.\.\.\s*rest',          # # ... rest of
+                r'#\s*\.\.\.\s*same',          # # ... same as
+                r'#\s*\.\.\.\s*unchanged',     # # ... unchanged
+                r'#\s*keep\s+existing',        # # keep existing
+                r'#\s*unchanged\s+from',       # # unchanged from
+            ]
             has_omission = any(re.search(p, code_output, re.I) for p in omission_patterns)
             
-            if has_conflict or is_diff_format or has_omission:
-                last_error = "부적절한 형식(Conflict/Diff/Omission)이 감지되었습니다. " \
-                             "내용을 생략(# ...)하거나 diff 형식을 사용하지 마라. " \
-                             "반드시 파일 전체 내용을 처음부터 끝까지 새로 작성하라."
-                print(f"🚨 [Muse] 부적절한 형식(Conflict/Diff/Omission) 감지! 재시도...")
+            if has_conflict or is_diff_format:
+                last_error = f"Git 충돌 마커 또는 diff 형식(+/-)이 감지됨. " \
+                             f"diff: {len(diff_indicators)}줄, conflict: {has_conflict}. " \
+                             "절대 diff 형식을 사용하지 말고 전체 파일을 새로 작성하라."
+                print(f"🚨 [Muse] Conflict/Diff 감지! 재시도...")
+                continue
+            
+            if has_omission:
+                last_error = "코드 생략 패턴(# ... existing 등)이 감지됨. " \
+                             "생략하지 말고 전체 코드를 작성하라."
+                print(f"🚨 [Muse] Omission 감지! 재시도...")
                 continue
             
             # 🚨 구문 검사 (Python 파일)
