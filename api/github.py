@@ -91,11 +91,14 @@ class GitHubClient:
                 [git_path, "pull", remote_url, branch, "--no-rebase", "--strategy-option=theirs"],
                 capture_output=True, text=True
             )
-            # 충돌 발생 시 rebase 중단하고 현재 상태 유지
+            # 충돌 발생 시 강제 복구 (현재 변경사항 우선)
             if pull_result.returncode != 0:
-                subprocess.run([git_path, "rebase", "--abort"], check=False)
+                print(f"⚠️ Pull 충돌 발생, 로컬 상태 강제 복구")
                 subprocess.run([git_path, "merge", "--abort"], check=False)
-                print(f"⚠️ Pull 충돌 발생, 로컬 변경사항 우선 적용")
+                subprocess.run([git_path, "rebase", "--abort"], check=False)
+                # 충돌 마커가 남았을 수 있으므로 로컬 변경사항으로 덮어쓰기 시도
+                subprocess.run([git_path, "checkout", "--ours", "."], check=False)
+                subprocess.run([git_path, "add", "."], check=False)
             
             subprocess.run([git_path, "add", "."], check=True)
             
@@ -288,6 +291,11 @@ class GitHubClient:
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         content = f.read()
+                    
+                    # 🚨 최종 안전 검사: 충돌 마커가 포함된 파일은 API로 푸시하지 않음
+                    if any(m in content for m in ['<<<<<<<', '=======', '>>>>>>>']):
+                        print(f"  🚫 {filepath}: 충돌 마커 감지됨, API 푸시 중단")
+                        continue
                     
                     # 기존 파일 SHA 가져오기
                     try:
