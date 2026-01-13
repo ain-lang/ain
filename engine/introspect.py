@@ -26,6 +26,7 @@ class IntrospectMixin:
             if hasattr(self, 'burst_mode') and self.burst_mode and hasattr(self, 'burst_end_time') and self.burst_end_time:
                 if datetime.now() > (self.burst_end_time + timedelta(seconds=10)):
                     self.burst_mode = False
+                    # 🍃 버스트 종료 시 항상 api/keys.py의 설정을 우선 (SSOT)
                     self.current_interval = DEFAULT_INTERVAL
                     self._save_current_state()
                     self.send_telegram_msg("🍃 **Burst Mode Ended.**\n에너지를 다 썼어요... 이제 다시 평소 주기로 돌아가 조용히 공부할게요. 주인님 고생하셨어요! ✨")
@@ -42,7 +43,7 @@ class IntrospectMixin:
                 error_msg = imagination["error"]
                 if "429" in error_msg:
                     self.send_telegram_msg("🚨 **API Rate Limit Detected!**\n잠시 휴식 모드로 전환합니다. 5분 후에 다시 시도할게요.")
-                    self.current_interval = 3600  # 1시간
+                    self.current_interval = 1800  # 30분으로 고정
                     self._save_current_state()
                 else:
                     self.send_telegram_msg(f"⚠️ **에러:** {error_msg}")

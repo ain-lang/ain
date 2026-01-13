@@ -39,7 +39,12 @@ class HandlersMixin:
             state = self.fact_core.get_fact("system_state", default={})
             
         self.burst_mode = state.get("burst_mode", False)
-        self.current_interval = state.get("current_interval", DEFAULT_INTERVAL)
+        
+        # 🍃 Normal 모드일 때는 항상 api/keys.py의 설정을 우선 (SSOT)
+        if not self.burst_mode:
+            self.current_interval = DEFAULT_INTERVAL
+        else:
+            self.current_interval = state.get("current_interval", 600)
         
         burst_end_str = state.get("burst_end_time")
         if burst_end_str:
