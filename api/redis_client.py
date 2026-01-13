@@ -66,6 +66,6 @@ class RedisClient:
         state = {
             "burst_mode": False,
             "burst_end_time": None,
-            "current_interval": 1800  # 30분으로 고정
+                        "current_interval": 1800 # Default 30m
         }
         self.set_state("system_state", state)

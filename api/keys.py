@@ -31,7 +31,7 @@ def get_config() -> dict:
         "coder_model": "anthropic/claude-opus-4.5",       # [CRITICAL] DO NOT DOWNGRADE
         "opus_45_model": "anthropic/claude-opus-4.5", 
         "repo_name": os.getenv("REPO_NAME", ""),
-        "evolution_interval": int(os.getenv("EVOLUTION_INTERVAL", "1800")),  # 30분으로 고정
+                "evolution_interval": 1800,  # 30분으로 절대 고정 (환경변수 무시)
         "redis_url": os.getenv("REDIS_URL", ""),
     }
 
