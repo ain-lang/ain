@@ -167,11 +167,18 @@ class Overseer:
         if len(filename) > 100:
             return False, f"🚨 파일명이 너무 깁니다: {len(filename)}자 (최대 100자)"
         
-        # 🚨 1차 방어: Git 충돌 마커 검사 (매우 중요!)
-        git_conflict_markers = ['<<<<<<<', '=======', '>>>>>>>']
-        for marker in git_conflict_markers:
-            if marker in code:
-                return False, f"🚨 Git 충돌 마커 감지: '{marker}' - 코드에 충돌이 있습니다!"
+        # 🚨 1차 방어: Git 충돌 마커 검사 및 자가 치유(Self-Healing) 시도
+        from code_sanitizer import sanitize_code_output, is_valid_output
+        
+        # 적용 전 한 번 더 정화
+        clean_code, sanitize_result = sanitize_code_output(code, verbose=True)
+        
+        if sanitize_result["cleaned"]:
+            print(f"🔧 [Overseer] {filename} 코드에서 부적절한 형식 감지 및 자가 치유 완료")
+            code = clean_code # 정화된 코드로 교체
+        
+        if not is_valid_output(sanitize_result):
+            return False, f"🚨 자가 치유 실패: '{filename}'에 여전히 충돌 마커나 생략 패턴이 남아있습니다."
         
         # 🛡️ 2차 방어: 보호된 파일 체크 (apply_evolution 전에 미리 차단)
         if self.is_protected(filename):

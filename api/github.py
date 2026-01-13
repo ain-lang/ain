@@ -86,17 +86,17 @@ class GitHubClient:
             subprocess.run([git_path, "config", "--global", "user.email", "ain@evolution.ai"], check=True)
             subprocess.run([git_path, "config", "--global", "user.name", "AIN Core"], check=True)
             
-            # 5. 최신 상태로 pull (conflict 발생 시 중단하고 현재 변경사항 우선)
+            # 5. 최신 상태로 pull (충돌 시 로컬 변경사항 우선 - ours 전략)
             pull_result = subprocess.run(
-                [git_path, "pull", remote_url, branch, "--no-rebase", "--strategy-option=theirs"],
+                [git_path, "pull", remote_url, branch, "--no-rebase", "--strategy-option=ours"],
                 capture_output=True, text=True
             )
-            # 충돌 발생 시 강제 복구 (현재 변경사항 우선)
+            # 충돌 발생 시 강제 복구 (현재 로컬 상태 유지)
             if pull_result.returncode != 0:
-                print(f"⚠️ Pull 충돌 발생, 로컬 상태 강제 복구")
+                print(f"⚠️ Pull 충돌 발생, 로컬 상태 강제 복구 (ours 전략)")
                 subprocess.run([git_path, "merge", "--abort"], check=False)
                 subprocess.run([git_path, "rebase", "--abort"], check=False)
-                # 충돌 마커가 남았을 수 있으므로 로컬 변경사항으로 덮어쓰기 시도
+                # 충돌 마커가 생기는 것을 방지하기 위해 로컬 파일을 강제 유지
                 subprocess.run([git_path, "checkout", "--ours", "."], check=False)
                 subprocess.run([git_path, "add", "."], check=False)
             

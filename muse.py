@@ -183,6 +183,8 @@ class Muse:
         target_files_content = ""
         skipped_large_files = []
         
+        from code_sanitizer import sanitize_code_output
+
         for tf in set(target_files):
             tf_path = tf.lstrip('./')
             basename = os.path.basename(tf_path)
@@ -196,6 +198,9 @@ class Muse:
                 try:
                     with open(tf_path, 'r', encoding='utf-8') as f:
                         content = f.read()
+                        # 🧼 컨텍스트 정화: Coder에게 줄 기존 코드에서 충돌 마커 등 제거
+                        clean_content, _ = sanitize_code_output(content, verbose=False)
+                        content = clean_content
                         line_count = content.count('\n')
                         
                         # 200줄 이상이면 제외
