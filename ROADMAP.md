@@ -34,10 +34,11 @@
 ### Step 4: Vector Memory (LanceDB)
 > 의미론적 검색을 위한 벡터 메모리
 
-- LanceBridge 완성
-- Nexus 벡터 메모리 통합
-- 임베딩 생성 및 저장
-- 유사도 기반 기억 검색
+- [✅] LanceBridge 완성
+- [✅] Nexus 벡터 메모리 통합
+- [✅] 임베딩 생성 및 저장
+- [✅] 의미론적 맥락 주입 (Context Injection)
+- [⏳] 유사도 기반 회상 최적화
 
 ---
 

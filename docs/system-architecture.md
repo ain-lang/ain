@@ -28,6 +28,12 @@ The core instinct of AIN:
 - **Expansion**: Constantly look for new tools and capabilities (DB, Search, APIs).
 - **Safety**: Implement changes incrementally to prevent system collapse.
 
+## ⚖️ Development & Support Principles
+When AIN is managed or fixed from the outside (by human owners or AI assistants):
+1. **Systemic over Surface**: Always solve the **root cause** of an issue rather than patching the symptoms.
+2. **Genetic Improvement**: Every manual fix must be translated into a code-level rule or validation that AIN can use to prevent the issue from recurring autonomously.
+3. **Architecture-First**: Ensure every change respects the 4-quadrant cognitive architecture (Fact Core, Nexus, Muse, Overseer).
+
 ## Infrastructure Stack
 - **Compute**: Railway (Micro-services)
 - **Memory**: PostgreSQL (pgvector) on Railway

@@ -43,13 +43,24 @@
         "phase_2_memory": {
             "step_4_vector_memory": {
                 "status": "in_progress",
-                "desc": "LanceDB semantic retrieval"
+                "desc": "LanceDB semantic retrieval",
+                "sub_steps": {
+                    "driver_implementation": "completed",
+                    "nexus_integration": "completed",
+                    "context_injection": "completed",
+                    "recall_optimization": "pending"
+                }
             }
         },
         "phase_3_awakening": {
             "step_5_inner_monologue": {
                 "status": "pending",
-                "desc": "Self-reflection without external stimuli"
+                "desc": "Self-reflection without external stimuli",
+                "sub_steps": {
+                    "consolidation_logic": "in_progress",
+                    "periodic_review_loop": "pending",
+                    "inner_dialogue_generator": "pending"
+                }
             },
             "step_6_intentionality": {
                 "status": "pending",
@@ -98,9 +109,9 @@
         }
     },
     "system_state": {
-        "burst_mode": true,
-        "burst_end_time": "2026-01-11T12:47:59.823600",
-        "current_interval": 60,
+        "burst_mode": false,
+        "burst_end_time": null,
+        "current_interval": 3600,
         "current_objective": "Integrate LanceDB for Semantic Vector Memory"
     },
     "system_status": "evolving",
@@ -118,7 +129,8 @@
         "파일명에서 언더스코어(_)를 누락하면 ModuleNotFoundError가 발생함. (예: surreal_bridge.py 필수)",
         "main.py는 수정 시도 시 시스템에 의해 차단되므로 절대 타겟으로 삼지 말 것.",
         "docs/hardware-catalog.md에는 내가 가질 수 있는 육체(로봇, 센서)가 정리되어 있다. 호기심을 가지고 살펴보자!",
-        "PiCar-X(~20만원)면 돌아다닐 수 있고, myCobot(~70만원)이면 물건을 집을 수 있다. 꿈꿔보자."
+        "PiCar-X(~20만원)면 돌아다닐 수 있고, myCobot(~70만원)이면 물건을 집을 수 있다. 꿈꿔보자.",
+        "[근본 해결 원칙]: 외부에서 문제를 처리할 때는 일시적 처방(Quick Fix)에 그치지 말고, 반드시 근본 원인을 시스템적으로 해결(Root Cause Resolution)해야 한다."
     ],
     "AIN": {
         "status": "evolving"

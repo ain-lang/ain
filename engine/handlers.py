@@ -41,7 +41,7 @@ class HandlersMixin:
         self.burst_mode = state.get("burst_mode", False)
         
         # 🍃 Normal 모드일 때는 항상 api/keys.py의 설정을 우선 (SSOT)
-        # 🚨 중요: 여기서 DEFAULT_INTERVAL(1800)이 강제 적용되어야 함
+        # 🚨 중요: 여기서 DEFAULT_INTERVAL(3600)이 강제 적용되어야 함
         if not self.burst_mode:
             self.current_interval = DEFAULT_INTERVAL
             print(f"📡 [Status] Normal Mode: interval set to {self.current_interval} (from DEFAULT)")

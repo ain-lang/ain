@@ -18,7 +18,7 @@ def run_engine():
     ain.is_processing = False
     ain.burst_mode = False
     ain.burst_end_time = None
-    ain.current_interval = 1800  # 30분으로 절대 고정
+    ain.current_interval = 3600  # 1시간으로 절대 고정
     
     # Step 3: 비동기 브릿지 초기화
     try:

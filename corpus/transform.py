@@ -27,6 +27,21 @@ class TransformMixin:
             context_parts.append("\n[RIGHT BRAIN - Evolution Memory]\n")
             context_parts.append(self.right_brain.get_evolution_summary())
         
+        # [Step 4 Integration] 의미론적 기억(Semantic Memory) 회상 추가
+        if hasattr(self.right_brain, 'get_recent_insights'):
+            context_parts.append("\n[SEMANTIC INSIGHTS - Recalled Memories]\n")
+            # 쿼리가 있으면 연관 기억, 없으면 최근 통찰 추출
+            if user_query:
+                memories = self.right_brain.retrieve_relevant_memories(user_query, limit=3)
+                if memories:
+                    for i, m in enumerate(memories, 1):
+                        context_parts.append(f"  {i}. {m.get('text', '')[:200]}\n")
+                else:
+                    context_parts.append("  (연관된 의미론적 기억 없음)\n")
+            else:
+                context_parts.append(self.right_brain.get_recent_insights(limit=3))
+                context_parts.append("\n")
+        
         if user_query:
             context_parts.append(f"\n[USER QUERY]\n{user_query}")
         

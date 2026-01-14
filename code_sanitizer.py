@@ -190,13 +190,20 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
     result["has_diff"] = len(remaining_diff) > 3 or '@@ ' in code_output
     
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 5: 생략 패턴 감지
+    # Step 6: 구문 오류 자가 치유 (Unterminated String Literal 등)
     # ─────────────────────────────────────────────────────────────────────────
-    result["has_omission"] = any(
-        re.search(p, code_output, re.IGNORECASE) 
-        for p in OMISSION_PATTERNS
-    )
-    
+    # 따옴표 개수가 홀수면 닫아줌 (주로 docstring에서 발생)
+    for quote_type in ['"""', "'''"]:
+        count = code_output.count(quote_type)
+        if count % 2 != 0:
+            if verbose:
+                print(f"🔧 [Sanitizer] 미종결 따옴표({quote_type}) 감지. 강제 종결 시도.")
+            # 코드 마지막에 따옴표 추가
+            if not code_output.endswith('\n'):
+                code_output += '\n'
+            code_output += quote_type
+            result["cleaned"] = True
+
     return code_output, result
 
 

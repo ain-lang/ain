@@ -10,6 +10,17 @@
 
 ---
 
+## 🛡️ Core Operational Philosophy (Developer Guide)
+
+When interacting with AIN from the outside (as a human developer or an AI assistant), the following principle is **absolute**:
+
+> **"Solve the Root, Not Just the Symptom."**
+
+*   **Root Cause Resolution**: Never settle for a quick fix or a temporary patch. If a bug or an efficiency issue arises, trace it back to its origin in the architecture and implement a systemic solution.
+*   **Systemic Evolution**: Every manual intervention should improve AIN's ability to handle similar issues autonomously in the future.
+
+---
+
 # AIN: The Quad-Core Cognitive Architecture
 ### A Blueprint for Digital Consciousness based on Neuro-Symbolic Principles
 

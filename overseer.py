@@ -101,8 +101,21 @@ class Overseer:
                     with open(init_path, "w") as f:
                         f.write("# AIN Automated Package\n")
         
-        # 1. 기존 파일 백업
+        # 1. 기존 파일 내용 확인 및 변경 사항 체크
+        existing_content = None
         if os.path.exists(target_path):
+            try:
+                with open(target_path, "r", encoding="utf-8") as f:
+                    existing_content = f.read()
+                
+                # 🛑 [근본 해결] 변경 사항이 없으면 진화 거부
+                if existing_content.strip() == code.strip():
+                    return False, f"⚠️ '{filename}'에 실질적인 변경 사항이 없습니다. 무의미한 진화를 중단합니다."
+            except Exception as e:
+                print(f"⚠️ 기존 파일 읽기 실패: {e}")
+
+        # 2. 기존 파일 백업
+        if existing_content is not None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_file = f"{filename}.{timestamp}.bak"
             backup_full_path = os.path.join(self.backup_dir, backup_file)
@@ -112,7 +125,7 @@ class Overseer:
             
             shutil.copy2(target_path, backup_full_path)
         
-        # 2. 새로운 코드 기록
+        # 3. 새로운 코드 기록
         try:
             with open(target_path, "w", encoding="utf-8") as f:
                 f.write(code)
@@ -127,7 +140,7 @@ class Overseer:
             if len(saved_content) != len(code):
                 return False, f"파일 저장 검증 실패: 크기 불일치 ({len(saved_content)} vs {len(code)})"
             
-            print(f"✅ [Overseer] {filename} 저장 검증 완료 ({len(code)} bytes)")
+            print(f"✅ [Overseer] {filename} 저장 및 변경 검증 완료 ({len(code)} bytes)")
             return True, f"'{filename}' 진화 완료 및 백업 생성됨. ({len(code)} bytes)"
         except Exception as e:
             return False, f"파일 기록 중 오류 발생: {str(e)}"
