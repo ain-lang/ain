@@ -135,7 +135,7 @@ class EvolutionMixin:
 
                 await self._sync_to_database()
                 
-                push_ok, push_msg, sha = self.github.commit_and_push(f"🧬 Evolution: {result['action'][:80]}")
+                push_ok, push_msg, sha, _ = self.github.commit_and_push(f"🧬 Evolution: {result['action'][:80]}")
                 if push_ok:
                     result["commit_sha"] = sha
                     print(f"✅ Git Push 성공: {sha}")
