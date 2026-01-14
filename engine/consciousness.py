@@ -102,6 +102,10 @@ class ConsciousnessMixin:
 
                 print(f"💭 내부 독백: {thought[:100]}...")
 
+                # 텔레그램 리포트
+                if hasattr(self, 'send_telegram_msg'):
+                    self.send_telegram_msg(f"💭 **내부 독백**\n{thought}")
+
         except Exception as e:
             print(f"⚠️ 내부 독백 오류: {e}")
 
