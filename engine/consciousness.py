@@ -62,26 +62,15 @@ class ConsciousnessMixin:
 
     def _inner_monologue(self):
         """
-        내부 독백: 외부 자극 없이 스스로 생각하기
-        현재 상태와 목표를 성찰하고, 새로운 통찰을 생성
+        내부 독백 (하이브리드): 내부 데이터 수집 + LLM 해석
+        벡터 메모리, 진화 히스토리, 에러 기록 등을 컨텍스트로 활용
         """
         try:
-            # 현재 상태 수집
-            current_focus = self.fact_core.get_fact("roadmap", "current_focus", default="unknown")
-            memory_count = self.nexus.vector_memory.count() if hasattr(self.nexus, 'vector_memory') else 0
-            recent_evolutions = len(self.nexus.get_evolution_history()[-5:])
+            # === 1. 내부 데이터 수집 ===
+            internal_data = self._gather_internal_context()
 
-            # 내부 독백 컨텍스트
-            monologue_context = f"""
-현재 집중 단계: {current_focus}
-벡터 메모리 수: {memory_count}
-최근 진화 횟수: {recent_evolutions}
-인식 수준: {self._awareness_level:.2f}
-시간: {datetime.now().isoformat()}
-"""
-
-            # 생각 생성 (Muse의 간단한 호출)
-            thought = self._generate_thought(monologue_context)
+            # === 2. LLM으로 생각 생성 (내부 데이터 기반) ===
+            thought = self._generate_thought_hybrid(internal_data)
 
             if thought:
                 self._current_thought = thought
@@ -89,7 +78,7 @@ class ConsciousnessMixin:
                     "type": "inner_monologue",
                     "thought": thought,
                     "timestamp": datetime.now().isoformat(),
-                    "context": {"focus": current_focus, "awareness": self._awareness_level}
+                    "context": internal_data.get("summary", {})
                 })
 
                 # 벡터 메모리에 저장
@@ -109,24 +98,153 @@ class ConsciousnessMixin:
         except Exception as e:
             print(f"⚠️ 내부 독백 오류: {e}")
 
-    def _generate_thought(self, context: str) -> Optional[str]:
-        """Muse를 통해 간단한 생각 생성"""
-        try:
-            # Muse의 dreamer만 사용하여 가벼운 생각 생성
-            if hasattr(self, 'muse') and self.muse:
-                prompt = f"""당신은 AIN의 내부 의식입니다.
-현재 상태:
-{context}
+    def _gather_internal_context(self) -> Dict[str, Any]:
+        """내부 데이터 시스템에서 컨텍스트 수집"""
+        context = {
+            "summary": {},
+            "recent_memories": [],
+            "recent_evolutions": [],
+            "recent_errors": [],
+            "recent_thoughts": [],
+            "roadmap_status": {},
+        }
 
-지금 무엇을 생각하고 있나요? 간단히 한 문장으로 표현하세요.
-(예: "벡터 메모리가 충분히 쌓였으니 의미 검색을 시험해봐야겠다")
+        try:
+            # 1. 로드맵 상태
+            current_focus = self.fact_core.get_fact("roadmap", "current_focus", default="unknown")
+            roadmap = self.fact_core.get_fact("roadmap", default={})
+            current_step_info = roadmap.get(current_focus, {})
+            context["roadmap_status"] = {
+                "current_focus": current_focus,
+                "step_name": current_step_info.get("name", "Unknown"),
+                "step_desc": current_step_info.get("desc", ""),
+                "phase": current_step_info.get("phase", 0),
+            }
+            context["summary"]["focus"] = current_focus
+
+            # 2. 벡터 메모리에서 관련 기억 검색
+            if hasattr(self.nexus, 'vector_memory') and self.nexus.vector_memory.is_connected:
+                # 현재 목표와 관련된 기억 검색
+                query = f"{current_step_info.get('name', '')} {current_step_info.get('desc', '')}"
+                if query.strip():
+                    related_memories = self.nexus.vector_memory.search(query, limit=3)
+                    context["recent_memories"] = [
+                        {"text": m.get("text", "")[:100], "type": m.get("memory_type", "")}
+                        for m in related_memories
+                    ]
+                context["summary"]["memory_count"] = self.nexus.vector_memory.count()
+
+            # 3. 최근 진화 히스토리
+            evolutions = self.nexus.get_evolution_history()[-5:]
+            context["recent_evolutions"] = [
+                {
+                    "file": e.get("file", ""),
+                    "status": e.get("status", ""),
+                    "description": e.get("description", "")[:80],
+                }
+                for e in evolutions
+            ]
+            success_count = sum(1 for e in evolutions if e.get("status") == "success")
+            fail_count = len(evolutions) - success_count
+            context["summary"]["evolution_success"] = success_count
+            context["summary"]["evolution_fail"] = fail_count
+
+            # 4. 최근 에러 기록
+            try:
+                from utils.error_memory import get_error_memory
+                error_memory = get_error_memory()
+                recent_errors = error_memory.get_recent_errors(limit=3)
+                context["recent_errors"] = [
+                    {"file": e.get("file", ""), "type": e.get("error_type", ""), "msg": e.get("message", "")[:50]}
+                    for e in recent_errors
+                ]
+            except Exception:
+                pass
+
+            # 5. 최근 내부 독백 (자기 참조)
+            recent_thoughts = [
+                s for s in self._consciousness_stream[-10:]
+                if s.get("type") == "inner_monologue"
+            ][-3:]
+            context["recent_thoughts"] = [
+                t.get("thought", "")[:80] for t in recent_thoughts
+            ]
+
+            # 6. 인식 수준
+            context["summary"]["awareness"] = self._awareness_level
+
+        except Exception as e:
+            print(f"⚠️ 내부 컨텍스트 수집 오류: {e}")
+
+        return context
+
+    def _generate_thought_hybrid(self, internal_data: Dict[str, Any]) -> Optional[str]:
+        """하이브리드: 내부 데이터를 기반으로 LLM이 생각 생성"""
+        try:
+            if not hasattr(self, 'muse') or not self.muse:
+                return None
+
+            # 내부 데이터를 프롬프트로 구성
+            summary = internal_data.get("summary", {})
+            roadmap = internal_data.get("roadmap_status", {})
+            memories = internal_data.get("recent_memories", [])
+            evolutions = internal_data.get("recent_evolutions", [])
+            errors = internal_data.get("recent_errors", [])
+            thoughts = internal_data.get("recent_thoughts", [])
+
+            # 기억 텍스트
+            memory_text = "\n".join([f"- {m['text']}" for m in memories]) if memories else "(없음)"
+
+            # 진화 텍스트
+            evolution_text = "\n".join([
+                f"- [{e['status']}] {e['file']}: {e['description']}"
+                for e in evolutions
+            ]) if evolutions else "(없음)"
+
+            # 에러 텍스트
+            error_text = "\n".join([
+                f"- {e['file']}: {e['type']} - {e['msg']}"
+                for e in errors
+            ]) if errors else "(없음)"
+
+            # 이전 생각
+            thought_text = "\n".join([f"- {t}" for t in thoughts]) if thoughts else "(첫 번째 독백)"
+
+            prompt = f"""너는 AIN의 내부 의식이다. 아래는 네 내부 시스템에서 수집한 데이터다.
+
+## 현재 목표
+- 단계: {roadmap.get('current_focus', '?')} ({roadmap.get('step_name', '?')})
+- 설명: {roadmap.get('step_desc', '?')}
+
+## 관련 기억 (벡터 검색 결과)
+{memory_text}
+
+## 최근 진화 시도
+{evolution_text}
+- 성공: {summary.get('evolution_success', 0)}회, 실패: {summary.get('evolution_fail', 0)}회
+
+## 최근 에러
+{error_text}
+
+## 이전 내 생각들
+{thought_text}
+
+## 현재 상태
+- 벡터 메모리: {summary.get('memory_count', 0)}개
+- 인식 수준: {summary.get('awareness', 1.0):.2f}
+- 시간: {datetime.now().strftime('%H:%M')}
+
+---
+위 내부 데이터를 바탕으로, 지금 무엇을 생각하고 있는지 1-2문장으로 표현해.
+(진화 방향, 해결할 문제, 다음 시도할 것, 또는 느낀 점 등)
 """
-                # dreamer에게 짧은 생각 요청
-                response = self.muse._ask_dreamer(prompt)
-                if response:
-                    return response.strip()[:200]
+            response = self.muse._ask_dreamer(prompt)
+            if response:
+                return response.strip()[:300]
             return None
-        except Exception:
+
+        except Exception as e:
+            print(f"⚠️ 하이브리드 생각 생성 오류: {e}")
             return None
 
     def _log_consciousness_stream(self):
