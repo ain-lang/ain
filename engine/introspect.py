@@ -53,13 +53,14 @@ class IntrospectMixin:
             no_evolution = imagination.get("no_evolution", False)
 
             if no_evolution:
-                if hasattr(self, 'burst_mode') and self.burst_mode or user_query:
-                    self.send_telegram_msg(f"😴 **성찰 결과:** {intent}\n현재 단계에서 더 이상 개선할 사항이 없다고 판단했습니다. 다음 로드맵 단계로 넘어갈 준비를 할게요!")
+                print(f"😴 NO_EVOLUTION: {intent}")
+                self.send_telegram_msg(f"😴 **Step 완료:** {intent[:150]}\n다음 로드맵 단계로 넘어갈 준비!")
                 return
 
             if not updates:
-                if hasattr(self, 'burst_mode') and self.burst_mode or user_query:
-                    self.send_telegram_msg(f"💭 **생각:** {intent}")
+                print(f"💭 진화 시도했으나 updates 없음: {intent}")
+                # 주기적 진화에서도 결과 알림 (디버깅용)
+                self.send_telegram_msg(f"💭 **진화 탐색:** {intent[:150]}\n(적용할 변경사항 없음)")
                 return
 
             self.send_telegram_msg(f"🧬 **진화 시도!**\n**의도:** {intent}")
