@@ -16,6 +16,23 @@ class Muse:
         self.coder_client = OpenRouterClient(model=coder_model)
         self.prime_directive = prime_directive
 
+    def _ask_dreamer(self, prompt: str) -> str:
+        """
+        Dreamer에게 간단한 질문을 하고 응답을 받음
+        Inner Monologue 등 외부 모듈에서 사용
+        """
+        try:
+            result = self.dreamer_client.chat([
+                {"role": "system", "content": "너는 AIN의 내부 의식이다. 간결하고 성찰적으로 답하라."},
+                {"role": "user", "content": prompt}
+            ])
+            if result.get("success"):
+                return result.get("content", "")
+            return ""
+        except Exception as e:
+            print(f"⚠️ Dreamer 질문 실패: {e}")
+            return ""
+
     def _compress_context(self, system_context):
         """[Cost Optimization] 전체 코드베이스에서 핵심 로직만 추출하여 전송량을 줄임"""
         compressed = ""
@@ -414,16 +431,17 @@ import ...
             last_resort = re.search(r'```(?:python|py)?\s*(.*?)```', code_output, re.DOTALL)
             if last_resort and len(last_resort.group(1).strip()) > 100:
                 fallback_code = last_resort.group(1).strip()
-                # Dreamer의 의도에서 파일명 추론
-                file_hint = re.search(r'(?:수정|변경|업데이트|Update|Modify).*?[`\'"]([\w/]+\.py)[`\'"]', intent, re.IGNORECASE)
+                # Dreamer의 의도에서 파일명 추론 (개선된 정규식)
+                file_hint = re.search(r'([\w/]+\.py)', intent)
                 if file_hint:
                     fallback_filename = file_hint.group(1)
+                    print(f"🔄 [Muse] 마지막 시도: {fallback_filename}로 코드 추출 ({len(fallback_code)} bytes)")
+                    updates.append({"filename": fallback_filename, "code": fallback_code})
+                    return {"intent": intent, "updates": updates}
                 else:
-                    fallback_filename = "nexus.py"  # 기본값
-                
-                print(f"🔄 [Muse] 마지막 시도: {fallback_filename}로 코드 추출 ({len(fallback_code)} bytes)")
-                updates.append({"filename": fallback_filename, "code": fallback_code})
-                return {"intent": intent, "updates": updates}
+                    # 하드코딩 대신 명확한 실패
+                    print("⚠️ [Muse] 파일명 추론 실패, 진화 스킵")
+                    return {"intent": intent, "updates": [], "error": "파일명 추론 실패"}
             
             # 디버깅용 샘플 (백틱 유지)
             sample_display = sample.replace('`', '`')  # 그대로 유지

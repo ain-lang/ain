@@ -15,7 +15,7 @@ class ConsciousnessMixin:
     """의식 시스템 믹스인 - AINCore에서 사용"""
 
     # 의식 루프 주기 설정 (초)
-    INNER_MONOLOGUE_INTERVAL = 3600  # 1시간마다 내부 독백 (토큰 절약)
+    INNER_MONOLOGUE_INTERVAL = 1800  # 30분마다 내부 독백 (진화 후 30분에 실행)
     CONSCIOUSNESS_LOG_INTERVAL = 60  # 1분마다 의식 상태 로깅 (토큰 안 씀)
 
     def init_consciousness(self):

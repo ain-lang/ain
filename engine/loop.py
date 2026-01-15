@@ -39,7 +39,7 @@ def run_engine():
     last_periodic_check = time.time()
 
     print("🚀 AIN 엔진 메인 루프 가동.")
-    print("   └─ 진화: 1시간마다 | 의식 테스트: 계속 작동")
+    print("   └─ 진화: 1시간마다 | 독백: 진화 후 30분")
 
     while True:
         try:
@@ -65,6 +65,8 @@ def run_engine():
             if not ain.is_processing and (time.time() - last_periodic_check > ain.current_interval):
                 ain.introspect()
                 last_periodic_check = time.time()
+                # 진화 후 독백 타이밍 재설정 (30분 후 독백 실행되도록)
+                ain._last_monologue_time = time.time()
 
             time.sleep(2)
         except Exception as e:
