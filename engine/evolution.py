@@ -41,7 +41,12 @@ class EvolutionMixin:
                 avoid_files_hint = f"\n\n[🚨 최근 진화된 파일 - 다른 파일로 진화하라]\n{', '.join(self._recent_evolved_files[-5:])}"
             
             if self._no_change_counter >= 2:
-                avoid_files_hint += f"\n\n[⚠️ 연속 {self._no_change_counter}회 변경 없음! 반드시 다른 파일을 수정하라]"
+                avoid_files_hint += f"\n\n[⚠️ 연속 {self._no_change_counter}회 변경 없음! 현재 Step이 이미 완료된 것일 수 있다. 다음 Step으로 이동하라!]"
+
+            # 연속 3회 이상 변경 없음 → 현재 Step 완료로 간주, 강제 스킵
+            if self._no_change_counter >= 3:
+                print(f"🔄 연속 {self._no_change_counter}회 변경 없음 → 현재 Step 완료로 간주, 다음 Step 탐색")
+                avoid_files_hint += "\n\n[🚨 강제 지시: 현재 Step은 완료되었다. ROADMAP.md에서 다음 Step을 찾아 그 작업을 제안하라!]"
             
             imagination = self.muse.imagine(
                 system_context=system_snapshot,

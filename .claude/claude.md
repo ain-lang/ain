@@ -46,33 +46,43 @@
 
 ---
 
-## 알려진 문제점
+## 해결된 문제점 ✅
 
-### 1. 진화 "완료" but 변경사항 없음
-**증상**: 진화 성공 메시지 후 `nothing to commit`
-**원인**:
-- Dreamer가 `engine/evolution.py` 수정 지시 → Coder가 `nexus.py`에 적용
-- 파일 파싱 fallback이 `nexus.py`를 기본값으로 사용
-**위치**: `muse.py:413-426` (fallback 로직)
+### 1. ✅ 진화 "완료" but 변경사항 없음 (파일 파싱)
+**증상**: Dreamer가 지정한 파일과 다른 파일에 적용됨
+**근본 해결**: `muse.py` fallback 하이브리드 방식 적용
+- 정규식 개선: 의도에서 첫 `.py` 파일 추출
+- 추론 실패 시 `nexus.py` 하드코딩 대신 에러 반환
 
-### 2. 독백 작동 안 됨
-**증상**: Inner Monologue 텔레그램 메시지 없음
-**원인**: `consciousness.py:241`에서 `self.muse._ask_dreamer()` 호출하지만 메서드 없음
-**해결**: `muse.py`에 `_ask_dreamer()` 메서드 추가 필요
+### 2. ✅ 독백 작동 안 됨
+**근본 해결**: `muse.py`에 `_ask_dreamer()` 메서드 추가
+- 타이밍: 진화 후 30분에 독백 실행
 
-### 3. Python 구문 오류 반복
+### 3. ✅ "변경사항 없음" 무한 반복
+**증상**: Dreamer가 이미 완료된 Step 작업 계속 제안
+**근본 해결**:
+- `muse.py` Dreamer 프롬프트에 "구현 여부 직접 확인" 규칙 추가
+- `muse.py`에 Step 완료 판단 기준 명시
+- `evolution.py`에 연속 3회 변경없음 시 "다음 Step 탐색" 강제 지시
+
+---
+
+## 미해결 문제점
+
+### 1. Python 구문 오류 반복
 **증상**: `unterminated string literal` 에러
 **원인**:
 - 대형 파일 수정 시 토큰 한계로 코드 잘림
 - `code_sanitizer.py`의 따옴표 자동 치유 불완전
 **위치**: `code_sanitizer.py:193-205`
+**TODO**: 대형 파일 동적 체크 (줄 수 기반)
 
 ---
 
 ## 중요한 타이밍 규칙
 
 ```
-[진화 사이클]
+[진화 사이클] ✅ 구현 완료
 ├── 진화 (1시간마다)
 ├── 30분 대기
 ├── 독백 (진화 후 30분)
@@ -81,8 +91,8 @@
 
 현재 설정:
 - EVOLUTION_INTERVAL = 3600 (1시간)
-- INNER_MONOLOGUE_INTERVAL = 3600 (1시간) ← 1800으로 변경 필요
-- 독백 시작 시점을 진화 후 30분으로 조정 필요
+- INNER_MONOLOGUE_INTERVAL = 1800 (30분) ✅
+- 진화 완료 시 독백 타이머 리셋 ✅
 ```
 
 ---
@@ -120,10 +130,12 @@ git reset --hard HEAD~1  # 마지막 커밋 롤백
 
 ## 다음 할 일
 
-1. [ ] `muse.py`에 `_ask_dreamer()` 메서드 추가
-2. [ ] 진화/독백 30분 번갈아 실행 구현
-3. [ ] 파일 파싱 fallback 로직 수정 (nexus.py 하드코딩 제거)
-4. [ ] 대형 파일 제외 로직을 동적으로 변경 (200줄 기준)
+1. [x] `muse.py`에 `_ask_dreamer()` 메서드 추가 ✅
+2. [x] 진화/독백 30분 번갈아 실행 구현 ✅
+3. [x] 파일 파싱 fallback 로직 수정 (하이브리드) ✅
+4. [x] "변경사항 없음" 반복 시 다음 Step 탐색 ✅
+5. [ ] 대형 파일 제외 로직을 동적으로 변경 (200줄 기준)
+6. [ ] `code_sanitizer.py` 따옴표 치유 로직 개선
 
 ---
 
