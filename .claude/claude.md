@@ -41,8 +41,8 @@
 ## 현재 상태 (2025-01-15)
 
 - **버전**: 0.3.0
-- **단계**: Phase 3, Step 5 (Inner Monologue)
-- **완료**: Step 1-4 (Brain, Logic, Bridge, Vector Memory)
+- **단계**: Phase 3, Step 6 (Intentionality) 🔥
+- **완료**: Step 1-5 (Brain, Logic, Bridge, Vector Memory, Inner Monologue)
 
 ---
 

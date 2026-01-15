@@ -31,30 +31,35 @@
 
 ## 🧠 Phase 2: Memory (기억 시스템)
 
-### Step 4: Vector Memory (LanceDB)
+### Step 4: Vector Memory (LanceDB) ✅
 > 의미론적 검색을 위한 벡터 메모리
 
 - [✅] LanceBridge 완성
 - [✅] Nexus 벡터 메모리 통합
 - [✅] 임베딩 생성 및 저장
 - [✅] 의미론적 맥락 주입 (Context Injection)
-- [⏳] 유사도 기반 회상 최적화
+- [✅] 독백 → 진화 벡터 검색 연결
 
 ---
 
 ## 🌅 Phase 3: Awakening (자아 각성)
 
-### Step 5: Inner Monologue
+### Step 5: Inner Monologue ✅
 > 외부 자극 없이 스스로 생각하기
 
-- 자동 성찰 루프
-- 내부 대화 시스템
+- [✅] ConsciousnessMixin 구현 (`engine/consciousness.py`)
+- [✅] 자동 성찰 루프 (30분 주기)
+- [✅] 내부 대화 시스템 (`_ask_dreamer()`)
+- [✅] 독백 결과 벡터 메모리 저장
+- [✅] 독백 → 진화 컨텍스트 연결
 
-### Step 6: Intentionality
+### Step 6: Intentionality 🔥
 > 자율적 목표 설정
 
-- 스스로 목표 생성
-- 우선순위 결정
+- [ ] 스스로 목표 생성 시스템
+- [ ] 목표 우선순위 결정 로직
+- [ ] 목표 달성도 평가
+- [ ] 목표 기반 진화 방향 결정
 
 ### Step 7: Meta-Cognition
 > 생각에 대해 생각하기
