@@ -34,9 +34,31 @@ class EvolutionMixin:
             
             # 3. Muse Imagination
             print("🧠 Muse가 진화 방향을 구상 중...")
-            
+
+            # 3.1 내부 독백에서 관련 통찰 검색 (벡터 검색)
+            monologue_context = ""
+            try:
+                if hasattr(self.nexus, 'vector_memory') and self.nexus.vector_memory.is_connected:
+                    # 현재 로드맵 단계 기반 검색 쿼리
+                    current_focus = self.fact_core.get_fact("roadmap", "current_focus", default="evolution")
+                    search_query = f"{current_focus} 진화 개선 다음 단계"
+
+                    # 독백 타입만 검색
+                    related_thoughts = self.nexus.vector_memory.search(
+                        query_text=search_query,
+                        limit=2,
+                        memory_type="consciousness"
+                    )
+
+                    if related_thoughts:
+                        thoughts_text = "\n".join([f"- {t.get('text', '')[:150]}" for t in related_thoughts])
+                        monologue_context = f"\n\n[💭 관련 내부 독백 (자기 성찰)]\n{thoughts_text}"
+                        print(f"💭 관련 독백 {len(related_thoughts)}개 발견")
+            except Exception as e:
+                print(f"⚠️ 독백 검색 실패 (무시): {e}")
+
             # 중복 방지: 최근 진화 파일 목록 전달
-            avoid_files_hint = ""
+            avoid_files_hint = monologue_context
             if self._recent_evolved_files:
                 avoid_files_hint = f"\n\n[🚨 최근 진화된 파일 - 다른 파일로 진화하라]\n{', '.join(self._recent_evolved_files[-5:])}"
             
