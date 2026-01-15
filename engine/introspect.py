@@ -142,6 +142,16 @@ class IntrospectMixin:
                             # 📊 디버그 정보 포함
                             debug_str = f"\n📊 {debug.get('changed_files', 0)} files | {' → '.join(debug.get('stages', []))}"
                             self.send_telegram_msg(f"🛠️ 진화 완료! ({', '.join(applied)}){debug_str}\n{commit_url}")
+
+                            # 🗺️ 로드맵 완료 체크 (진화 성공 후)
+                            try:
+                                from engine.roadmap_checker import get_roadmap_checker
+                                checker = get_roadmap_checker()
+                                roadmap_result = checker.check_and_advance()
+                                if roadmap_result.get("step_completed"):
+                                    self.send_telegram_msg(f"🗺️ **로드맵 업데이트**\n{roadmap_result['message']}")
+                            except Exception as roadmap_err:
+                                print(f"⚠️ 로드맵 체크 실패 (비치명적): {roadmap_err}")
                         else:
                             # ⚠️ 변경사항 없음 - 원인 표시
                             stages = ' → '.join(debug.get('stages', []))
