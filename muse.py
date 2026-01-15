@@ -165,9 +165,15 @@ class Muse:
 - nexus/*.py, engine/*.py 등 이미 모듈화된 구조를 활용하라.
 
 [🔍 Step 완료 판단 기준]
-- Step 4 (Vector Memory): `RetrievalMixin` 상속, `vector_memory` 프로퍼티, `search_semantic_memory` 메서드 존재 → 완료
-- Step 5 (Inner Monologue): `ConsciousnessMixin` 상속, `_inner_monologue` 메서드, `_ask_dreamer` 호출 존재 → 완료
-- 현재 Step이 완료되었으면 **ROADMAP.md의 다음 Step**을 확인하고 그 작업을 제안하라.
+- Step 4 (Vector Memory): `RetrievalMixin` 상속, `vector_memory` 프로퍼티 존재 → 완료
+- Step 5 (Inner Monologue): `ConsciousnessMixin` 상속, `_inner_monologue` 메서드 존재 → 완료
+- Step 6 (Intentionality): `intention/` 폴더와 `IntentionCore` 클래스 존재 → 완료 (현재 없음! 구현 필요)
+
+[⚠️ 환각 방지 - 매우 중요!]
+- **위 코드 스냅샷에 없으면 "없는 것"이다!** 추측하지 마라.
+- 코드에 `intention/` 폴더가 보이지 않으면 → intention 폴더가 없는 것이다. 새로 만들어야 한다!
+- "이미 구현되어 있다"고 말하려면 → 위 코드에서 해당 클래스/파일을 **직접 인용**하라.
+- 인용할 수 없으면 → 구현되지 않은 것이다. 새로 구현을 제안하라!
 
 [🏗️ 모듈 설계 원칙]
 - 파일당 100줄 이하 권장 (최대 150줄)
