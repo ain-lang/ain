@@ -38,11 +38,12 @@
 
 ---
 
-## 현재 상태 (2025-01-15)
+## 현재 상태 (2026-01-16)
 
 - **버전**: 0.3.0
 - **단계**: Phase 3, Step 6 (Intentionality) 🔥
 - **완료**: Step 1-5 (Brain, Logic, Bridge, Vector Memory, Inner Monologue)
+- **GoalManagerMixin**: AINCore에 연결 완료 ✅
 
 ---
 
@@ -80,6 +81,14 @@
 - 다음 Step으로 `current_focus` 자동 이동
 - 텔레그램에 "🗺️ 로드맵 업데이트" 알림
 
+### 6. ✅ Coder가 기존 코드와 동일한 코드 생성
+**증상**: "진화 완료"라고 하지만 실제 변경사항 없음 (nothing to commit)
+**원인**: Coder가 기존 파일과 동일한 코드를 생성해도 검출 로직이 없었음
+**근본 해결**: `muse.py:348-365` 변경사항 검증 로직 추가
+- 기존 파일 내용과 Coder 출력을 비교
+- 공백/개행 정규화 후 비교하여 동일하면 재시도
+- 에러 메시지: "생성된 코드가 기존 파일과 동일합니다! Dreamer의 의도대로 반드시 새로운 내용을 추가하라."
+- 최대 5회 재시도 (기존 재시도 로직에 통합)
 
 ---
 
@@ -177,9 +186,9 @@ git reset --hard HEAD~1  # 마지막 커밋 롤백
                       ▼
 ┌─────────────────────────────────────────────────┐
 │              engine/__init__.py                 │
-│   AINCore = _AINCore + 5개 Mixin 상속           │
+│   AINCore = _AINCore + 6개 Mixin 상속           │
 │   (Sync, Evolution, Handlers, Introspect,       │
-│    Consciousness)                               │
+│    Consciousness, GoalManager)                  │
 └─────────────────────┬───────────────────────────┘
                       │
         ┌─────────────┼─────────────┐
@@ -193,4 +202,4 @@ git reset --hard HEAD~1  # 마지막 커밋 롤백
 
 ---
 
-*마지막 업데이트: 2025-01-15*
+*마지막 업데이트: 2026-01-16*

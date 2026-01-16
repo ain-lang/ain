@@ -344,7 +344,26 @@ import ...
                     for tf in target_files:
                         error_memory.record_error(tf, error_type, str(e))
                     continue
-            
+
+            # 🔍 [변경사항 검증] 기존 파일과 동일하면 재시도
+            code_match = re.search(r'```(?:python)?\n(.*?)```', code_output, re.DOTALL)
+            file_match = re.search(r'(?i)FILE[ :\]]*\s*(\S+\.py)', code_output)
+            if code_match and file_match:
+                new_code = code_match.group(1).strip()
+                target_file = file_match.group(1).strip().lstrip('./')
+                if os.path.exists(target_file):
+                    try:
+                        with open(target_file, 'r', encoding='utf-8') as f:
+                            original_code = f.read().strip()
+                        # 공백/개행 정규화 후 비교
+                        norm_new = ' '.join(new_code.split())
+                        norm_orig = ' '.join(original_code.split())
+                        if norm_new == norm_orig:
+                            last_error = f"생성된 코드가 기존 {target_file}과 동일합니다! Dreamer의 의도대로 반드시 새로운 내용을 추가하라. (예: import 추가, 클래스 상속 추가 등)"
+                            print(f"🚨 [Muse] 변경사항 없음 감지! 재시도...")
+                            continue
+                    except: pass
+
             # 모든 검사 통과
             break
         else:
