@@ -20,10 +20,11 @@ from .handlers import HandlersMixin
 from .introspect import IntrospectMixin
 from .consciousness import ConsciousnessMixin
 from .consolidation import MemoryConsolidator, get_consolidator
+from .goal_manager import GoalManagerMixin
 from .loop import run_engine
 
 
-class AINCore(_AINCore, SyncMixin, EvolutionMixin, HandlersMixin, IntrospectMixin, ConsciousnessMixin):
+class AINCore(_AINCore, SyncMixin, EvolutionMixin, HandlersMixin, IntrospectMixin, ConsciousnessMixin, GoalManagerMixin):
     """
     AIN의 핵심 엔진 - 모든 믹스인을 통합한 완전한 클래스
 
