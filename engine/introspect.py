@@ -54,7 +54,16 @@ class IntrospectMixin:
 
             if no_evolution:
                 print(f"😴 NO_EVOLUTION: {intent}")
-                self.send_telegram_msg(f"😴 **Step 완료:** {intent[:150]}\n다음 로드맵 단계로 넘어갈 준비!")
+                # 🗺️ 로드맵 완료 체크 (진화 스킵 시에도 실행!)
+                try:
+                    from engine.roadmap_checker import get_roadmap_checker
+                    checker = get_roadmap_checker()
+                    roadmap_result = checker.check_and_advance()
+                    if roadmap_result.get("step_completed"):
+                        self.send_telegram_msg(f"🗺️ **로드맵 업데이트**\n{roadmap_result['message']}")
+                except Exception as roadmap_err:
+                    print(f"⚠️ 로드맵 체크 실패 (비치명적): {roadmap_err}")
+                self.send_telegram_msg(f"😴 **Step 완료:** {intent[:150]}")
                 return
 
             if not updates:

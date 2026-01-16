@@ -99,6 +99,13 @@
 - Dreamer에게 "❌ 표시된 항목만 구현하라" 명시
 - 완료 조건은 `roadmap_checker.py:STEP_COMPLETION_CRITERIA`에서 **한 곳에서만** 관리
 
+### 8. ✅ 진화 스킵 시 로드맵 업데이트 안 됨
+**증상**: Step 완료 조건 충족 → 진화 스킵 → fact_core.json 업데이트 안 됨 → 무한 반복
+**원인**: `introspect.py`에서 `no_evolution=True`일 때 `roadmap_checker.check_and_advance()` 호출 안 함
+**근본 해결**: `introspect.py:55-67` 수정
+- 진화 스킵 시에도 `roadmap_checker.check_and_advance()` 호출
+- Step 완료 시 `fact_core.json` 자동 업데이트 및 텔레그램 알림
+
 ---
 
 ## 미해결 문제점
