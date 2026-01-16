@@ -90,6 +90,15 @@
 - 에러 메시지: "생성된 코드가 기존 파일과 동일합니다! Dreamer의 의도대로 반드시 새로운 내용을 추가하라."
 - 최대 5회 재시도 (기존 재시도 로직에 통합)
 
+### 7. ✅ Dreamer가 이미 구현된 기능을 다시 제안
+**증상**: "이미 개발한 것 다시 개발" 반복
+**원인**: Dreamer 프롬프트의 Step 완료 기준이 하드코딩되어 실제 상태와 불일치
+**근본 해결**: 동적 완료 상태 전달 시스템
+- `roadmap_checker.py`: `get_current_status_for_dreamer()` 메서드 추가
+- `muse.py`: 하드코딩된 Step 기준 제거, 동적 결과 `{step_status}` 전달
+- Dreamer에게 "❌ 표시된 항목만 구현하라" 명시
+- 완료 조건은 `roadmap_checker.py:STEP_COMPLETION_CRITERIA`에서 **한 곳에서만** 관리
+
 ---
 
 ## 미해결 문제점
