@@ -124,7 +124,7 @@ class ConsciousnessMixin:
 
             # 2. 벡터 메모리에서 관련 기억 검색
             if hasattr(self.nexus, 'vector_memory') and self.nexus.vector_memory.is_connected:
-                # 현재 목표와 관련된 기억 검색
+                # 2-1. 현재 목표와 관련된 기억 검색
                 query = f"{current_step_info.get('name', '')} {current_step_info.get('desc', '')}"
                 if query.strip():
                     related_memories = self.nexus.vector_memory.search(query, limit=3)
@@ -132,6 +132,17 @@ class ConsciousnessMixin:
                         {"text": m.get("text", "")[:100], "type": m.get("memory_type", "")}
                         for m in related_memories
                     ]
+
+                # 2-2. 이전 독백 명시적 검색 (memory_type 필터)
+                previous_monologues = self.nexus.vector_memory.search(
+                    query_text=query if query.strip() else "inner monologue",
+                    limit=3,
+                    memory_type="consciousness"
+                )
+                context["previous_monologues"] = [
+                    m.get("text", "")[:100] for m in previous_monologues
+                ]
+
                 context["summary"]["memory_count"] = self.nexus.vector_memory.count()
 
             # 3. 최근 진화 히스토리
@@ -191,6 +202,7 @@ class ConsciousnessMixin:
             evolutions = internal_data.get("recent_evolutions", [])
             errors = internal_data.get("recent_errors", [])
             thoughts = internal_data.get("recent_thoughts", [])
+            previous_monologues = internal_data.get("previous_monologues", [])
 
             # 기억 텍스트
             memory_text = "\n".join([f"- {m['text']}" for m in memories]) if memories else "(없음)"
@@ -207,8 +219,11 @@ class ConsciousnessMixin:
                 for e in errors
             ]) if errors else "(없음)"
 
-            # 이전 생각
-            thought_text = "\n".join([f"- {t}" for t in thoughts]) if thoughts else "(첫 번째 독백)"
+            # 이전 생각 (런타임)
+            thought_text = "\n".join([f"- {t}" for t in thoughts]) if thoughts else "(없음)"
+
+            # 이전 독백 (벡터 메모리에서 검색)
+            monologue_text = "\n".join([f"- {m}" for m in previous_monologues]) if previous_monologues else "(없음)"
 
             prompt = f"""너는 AIN의 내부 의식이다. 아래는 네 내부 시스템에서 수집한 데이터다.
 
@@ -226,8 +241,11 @@ class ConsciousnessMixin:
 ## 최근 에러
 {error_text}
 
-## 이전 내 생각들
+## 이전 내 생각들 (현재 세션)
 {thought_text}
+
+## 과거 독백 (벡터 메모리)
+{monologue_text}
 
 ## 현재 상태
 - 벡터 메모리: {summary.get('memory_count', 0)}개
