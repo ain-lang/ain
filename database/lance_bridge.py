@@ -79,12 +79,15 @@ class LanceBridge:
             # LanceDB 연결
             self._db = lancedb.connect(self._db_path)
             
-            # 테이블 존재 여부 확인 및 생성
+            # 테이블 존재 여부 확인 및 생성/마이그레이션
             existing_tables = self._db.table_names()
             if "memory_bank" not in existing_tables:
                 self._create_memory_table()
             else:
                 self._table = self._db.open_table("memory_bank")
+                # 차원 불일치 확인 → 마이그레이션
+                if not self._check_and_migrate_schema():
+                    self._create_memory_table()
             
             self._connected = True
             print(f"✅ LanceDB 연결 성공: {self._db_path}")
@@ -121,7 +124,37 @@ class LanceBridge:
         
         self._table = self._db.create_table("memory_bank", initial_data)
         print("📦 memory_bank 테이블 생성 완료")
-    
+
+    def _check_and_migrate_schema(self) -> bool:
+        """
+        기존 테이블의 벡터 차원을 확인하고, 불일치 시 마이그레이션.
+        Returns: True if schema is OK, False if table needs recreation.
+        """
+        try:
+            schema = self._table.schema
+            vector_field = schema.field("vector")
+            # list<item: float> 형식에서 리스트 크기 추출
+            if hasattr(vector_field.type, 'list_size'):
+                existing_dim = vector_field.type.list_size
+            else:
+                # 첫 번째 레코드로 확인
+                df = self._table.to_pandas()
+                if len(df) > 0:
+                    existing_dim = len(df.iloc[0]["vector"])
+                else:
+                    return True  # 빈 테이블, OK
+
+            if existing_dim != self.VECTOR_DIM:
+                print(f"⚠️ 벡터 차원 불일치: 기존={existing_dim}, 필요={self.VECTOR_DIM}")
+                print("🔄 memory_bank 테이블 재생성 (마이그레이션)...")
+                self._db.drop_table("memory_bank")
+                return False
+
+            return True
+        except Exception as e:
+            print(f"⚠️ 스키마 확인 실패: {e}")
+            return True  # 에러 시 그대로 유지
+
     @property
     def is_connected(self) -> bool:
         return self._connected and self._db is not None
