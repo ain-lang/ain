@@ -226,7 +226,7 @@ class GitHubClient:
                                 debug["stages"].append("api-push: success")
                                 return True, "✅ GitHub API로 동기화 성공", api_result, debug
                             
-                            return True, f"푸시 실패: 토큰 권한 확인 필요", None, debug
+                            return False, f"푸시 실패: 토큰 권한 확인 필요", None, debug
                     else:
                         debug["stages"].append(f"force-push: error ({force_result.returncode})")
                         debug["push_issue"] = force_result.stderr[:200] if force_result.stderr else "unknown"
@@ -240,7 +240,7 @@ class GitHubClient:
                             debug["stages"].append("api-push: success")
                             return True, "✅ GitHub API로 동기화 성공", api_result, debug
                         
-                        return True, f"푸시 실패: {force_result.stderr[:100]}", None, debug
+                        return False, f"푸시 실패: {force_result.stderr[:100]}", None, debug
                 else:
                     print(f"✅ 원격 HEAD 확인: {remote_head[:8] if remote_head else 'N/A'}")
                     debug["stages"].append(f"push: verified ({remote_head[:8] if remote_head else 'N/A'})")

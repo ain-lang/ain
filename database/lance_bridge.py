@@ -32,8 +32,8 @@ class LanceBridge:
     
     _instance: Optional["LanceBridge"] = None
     
-    # 벡터 차원 (임베딩 모델에 따라 조정)
-    VECTOR_DIM = 384  # MiniLM 기준
+    # 벡터 차원 (Gemini text-embedding-004 기준)
+    VECTOR_DIM = 768
     
     # 기본 저장 경로
     DEFAULT_DB_PATH = os.environ.get("LANCEDB_PATH", "/data/lancedb")
@@ -64,7 +64,18 @@ class LanceBridge:
         try:
             # 디렉토리 생성
             os.makedirs(self._db_path, exist_ok=True)
-            
+
+            # 영속성 마커 확인 (Railway 재배포 감지)
+            marker = os.path.join(self._db_path, ".persistence_marker")
+            if not os.path.exists(marker):
+                print("⚠️ 새 LanceDB 인스턴스 감지 (재배포 후?)")
+                with open(marker, 'w') as f:
+                    f.write(datetime.now().isoformat())
+            else:
+                with open(marker, 'r') as f:
+                    created = f.read().strip()
+                print(f"✅ LanceDB 영속성 확인: {created} 이후 유지됨")
+
             # LanceDB 연결
             self._db = lancedb.connect(self._db_path)
             

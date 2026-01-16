@@ -12,15 +12,24 @@ except ImportError:
     HAS_LANCE = False
     LanceBridge = None
 
+# 실제 임베딩 서비스 임포트 (Gemini 768차원)
+try:
+    from api.embedding import get_embedding_service
+    HAS_REAL_EMBEDDING = True
+except ImportError:
+    HAS_REAL_EMBEDDING = False
+
 
 class VectorMemory:
     """Vector Memory 관리자 - LanceBridge 연동"""
-    
-    EMBEDDING_DIM = 384
-    
+
+    EMBEDDING_DIM = 768  # Gemini text-embedding-004 기준
+
     def __init__(self):
         self._lance_bridge: Optional[LanceBridge] = None
         self._lance_connected: bool = False
+        # 실제 임베딩 서비스 참조
+        self._embedding_service = get_embedding_service() if HAS_REAL_EMBEDDING else None
         self._init_lance_bridge()
     
     def _init_lance_bridge(self):
@@ -52,21 +61,32 @@ class VectorMemory:
     
     def text_to_embedding(self, text: str) -> List[float]:
         """
-        간단한 텍스트 → 벡터 변환 (임베딩 모델 없이)
-        해시 기반 결정론적 벡터 생성
+        텍스트 → 벡터 변환
+        실제 임베딩 서비스(Gemini) 우선 사용, 실패 시 해시 기반 폴백
+        """
+        # 실제 임베딩 서비스 우선 사용
+        if self._embedding_service and self._embedding_service.is_available:
+            return self._embedding_service.embed(text)
+
+        # 폴백: 해시 기반 결정론적 벡터
+        return self._hash_based_embedding(text)
+
+    def _hash_based_embedding(self, text: str) -> List[float]:
+        """
+        해시 기반 결정론적 벡터 생성 (폴백용)
         """
         normalized = text.lower().strip()
         words = normalized.split()
         word_count = len(words)
-        
+
         vector = []
-        
+
         # 텍스트 전체 해시를 기반으로 초기 벡터 생성
         full_hash = hashlib.sha256(normalized.encode()).hexdigest()
         for i in range(0, min(len(full_hash), self.EMBEDDING_DIM * 2), 2):
             val = int(full_hash[i:i+2], 16) / 255.0
             vector.append(val)
-        
+
         # 단어별 해시 추가
         for word in words[:50]:
             word_hash = hashlib.md5(word.encode()).hexdigest()[:8]
@@ -75,14 +95,14 @@ class VectorMemory:
                     break
                 val = int(word_hash[i:i+2], 16) / 255.0
                 vector.append(val)
-        
+
         # 차원 맞추기
         if len(vector) < self.EMBEDDING_DIM:
             padding_val = (word_count % 100) / 100.0
             vector.extend([padding_val] * (self.EMBEDDING_DIM - len(vector)))
         else:
             vector = vector[:self.EMBEDDING_DIM]
-        
+
         return vector
     
     def store(
