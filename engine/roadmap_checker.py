@@ -30,8 +30,9 @@ STEP_COMPLETION_CRITERIA = {
     "step_6_intentionality": {
         "name": "Intentionality",
         "checks": [
-            ("intention/core.py", "IntentionCore"),
             ("engine/goal_manager.py", "GoalManagerMixin"),
+            ("engine/__init__.py", "GoalManagerMixin"),  # AINCore에 상속 여부
+            ("engine/goal_executor.py", "GoalExecutor"),
         ],
         "next_step": "step_7_meta_cognition"
     },
@@ -126,6 +127,28 @@ class RoadmapChecker:
         except Exception as e:
             print(f"⚠️ fact_core.json 업데이트 실패: {e}")
             return False
+
+    def get_current_status_for_dreamer(self) -> str:
+        """
+        Dreamer에게 전달할 현재 Step 완료 상태 문자열 반환
+        하드코딩된 프롬프트 대신 이 결과를 사용
+        """
+        current = self.get_current_focus()
+        if not current or current not in STEP_COMPLETION_CRITERIA:
+            return "현재 Step 정보 없음"
+
+        criteria = STEP_COMPLETION_CRITERIA[current]
+        lines = [f"[현재 Step: {criteria['name']} ({current})]"]
+        lines.append("완료 조건 체크:")
+
+        for file_path, keyword in criteria["checks"]:
+            full_path = os.path.join(self.base_path, file_path)
+            if self._file_contains(full_path, keyword):
+                lines.append(f"  ✅ {file_path}: {keyword} 존재")
+            else:
+                lines.append(f"  ❌ {file_path}: {keyword} 없음 → 구현 필요!")
+
+        return "\n".join(lines)
 
     def check_and_advance(self) -> Dict:
         """

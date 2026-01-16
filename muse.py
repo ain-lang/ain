@@ -3,6 +3,7 @@ import os
 from api import OpenRouterClient
 from code_sanitizer import sanitize_code_output, get_error_message, is_valid_output
 from utils.error_memory import get_error_memory
+from engine.roadmap_checker import get_roadmap_checker
 
 class Muse:
     """
@@ -133,8 +134,15 @@ class Muse:
         
         # 1.5 현재 로드맵 단계 동적 파악
         current_step = self._get_current_roadmap_step()
-        
-        # 1.6 최근 진화 기록 가져오기
+
+        # 1.6 roadmap_checker에서 현재 Step 완료 상태 가져오기 (동적)
+        try:
+            checker = get_roadmap_checker()
+            step_status = checker.get_current_status_for_dreamer()
+        except Exception as e:
+            step_status = f"(상태 확인 실패: {e})"
+
+        # 1.7 최근 진화 기록 가져오기
         recent_evolutions = self._get_recent_evolutions(5)
         
         # 2. [Dreamer - Gemini 3 Pro] 전략 및 의도 수립
@@ -164,10 +172,10 @@ class Muse:
 - **"변경사항 없음" 탈출**: 같은 의도가 반복되면 반드시 다른 파일/다른 기능을 제안하라.
 - nexus/*.py, engine/*.py 등 이미 모듈화된 구조를 활용하라.
 
-[🔍 Step 완료 판단 기준]
-- Step 4 (Vector Memory): `RetrievalMixin` 상속, `vector_memory` 프로퍼티 존재 → 완료
-- Step 5 (Inner Monologue): `ConsciousnessMixin` 상속, `_inner_monologue` 메서드 존재 → 완료
-- Step 6 (Intentionality): `intention/` 폴더와 `IntentionCore` 클래스 존재 → 완료 (현재 없음! 구현 필요)
+[🔍 현재 Step 완료 상태 (자동 체크)]
+{step_status}
+
+⚠️ 위에서 ❌ 표시된 항목만 구현하라! ✅ 항목은 이미 완료된 것이니 건드리지 마라!
 
 [⚠️ 환각 방지 - 매우 중요!]
 - **위 코드 스냅샷에 없으면 "없는 것"이다!** 추측하지 마라.
