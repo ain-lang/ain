@@ -158,17 +158,35 @@ def vector_memory(self):
 줄 시작에 '+ ' 또는 '- '를 절대 쓰지 마라.
 ```
 
+### 13. ✅ Python 구문 오류 반복 - 대형 파일 보호 (2026-01-17)
+**증상**: `unterminated string literal` 에러 427회 반복
+**원인**: Coder가 200줄+ 파일 수정 시 토큰 한계로 코드 잘림
+**근본 해결**: `utils/file_size_guard.py` 모듈 추가
+- `ALWAYS_PROTECTED`: main.py, muse.py, overseer.py 등 (크기 무관 보호)
+- `DEFAULT_THRESHOLD = 150`: 권장 최대 줄 수
+- `HARD_LIMIT = 200`: 절대 수정 금지 줄 수
+- `validate_coder_output()`: Coder 출력에서 대형 파일 수정 자동 거부
+- `muse.py:542-556`: 파싱 단계에서 대형 파일 보호 로직 통합
+```python
+# muse.py 마지막 부분
+valid_updates, rejected = validate_coder_output(updates)
+if rejected:
+    return {"error": f"대형 파일 보호에 의해 거부됨.\n{rejection_msg}"}
+```
+
 ---
 
 ## 미해결 문제점
 
-### 1. Python 구문 오류 반복
-**증상**: `unterminated string literal` 에러
-**원인**:
-- 대형 파일 수정 시 토큰 한계로 코드 잘림
-- `code_sanitizer.py`의 따옴표 자동 치유 불완전
-**위치**: `code_sanitizer.py:193-205`
-**TODO**: 대형 파일 동적 체크 (줄 수 기반)
+### 1. ✅ Python 구문 오류 반복 (해결됨 - 2026-01-17)
+**증상**: `unterminated string literal` 에러 427회 반복
+**원인**: 대형 파일 수정 시 토큰 한계로 코드 잘림
+**근본 해결**: `utils/file_size_guard.py` 모듈 추가
+- 150줄 권장, 200줄 절대 한계
+- `ALWAYS_PROTECTED`: main.py, muse.py, overseer.py 등
+- `validate_coder_output()`: Coder 출력에서 대형 파일 수정 자동 거부
+- `muse.py:542-556`: 파싱 단계에서 대형 파일 보호 로직 통합
+→ 해결된 문제점 #13 참조
 
 ### 2. ✅ 독백이 "빈 데이터" 반복 (해결됨 - 2가지 원인)
 **증상**: "텅 빈 기억 속에서", "참조할 기억 없이" 동일한 내용 반복
@@ -380,7 +398,7 @@ claude --dangerously-skip-permissions
 5. [x] 진화 후 로드맵 자동 완료 체크 ✅
 6. [x] error_memory 고도화 - 임계값 기반 긴급 경고 ✅
 7. [x] Sanitizer diff 변환 로직 강화 ✅
-8. [ ] 대형 파일 제외 로직을 동적으로 변경 (200줄 기준)
+8. [x] 대형 파일 제외 로직을 동적으로 변경 (200줄 기준) ✅
 9. [ ] `code_sanitizer.py` 따옴표 치유 로직 개선
 
 ---
