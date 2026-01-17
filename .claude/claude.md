@@ -285,6 +285,32 @@ railway logs -n 100
 
 ---
 
+## Claude Code 권한 설정
+
+### 자동 승인 모드
+`.claude/settings.local.json`에서 `defaultMode: "acceptEdits"` 설정:
+- 파일 편집: 자동 승인 (allow 확인 없음)
+- Bash 명령: `allow` 목록에 있는 명령만 자동 실행
+
+### 현재 허용된 Bash 명령
+```
+git pull, git add, git commit, git push, git checkout, git fetch
+python, python3
+ls
+railway (모든 하위 명령)
+```
+
+### 더 강력한 옵션 (주의)
+```bash
+# 한 세션만 모든 권한 스킵
+claude --dangerously-skip-permissions
+
+# 완전 자동 모드 (settings.json)
+"defaultMode": "bypassPermissions"
+```
+
+---
+
 ## 다음 할 일
 
 1. [x] `muse.py`에 `_ask_dreamer()` 메서드 추가 ✅
