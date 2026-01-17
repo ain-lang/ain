@@ -132,47 +132,63 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
     result["diff_count"] = len(diff_indicators)
     has_diff_format = len(diff_indicators) >= 1 or '@@ ' in code_output
     
-    # 🔧 Diff 형식 자동 변환 (코드 블록 내부에서만)
+    # 🔧 Diff 형식 자동 변환 (강화된 버전)
     if has_diff_format:
         converted_lines = []
         in_code_block = False
         diff_converted = 0
         diff_removed = 0
-        
+
         for line in current_lines:
             # 코드 블록 시작/끝 감지
             if line.strip().startswith('```'):
                 in_code_block = not in_code_block
                 converted_lines.append(line)
                 continue
-            
-            # 코드 블록 내부에서만 diff 변환
+
+            # 코드 블록 내부에서 diff 변환
             if in_code_block:
+                stripped = line.strip()
+
                 # @@ 마커 제거
-                if line.strip().startswith('@@') and '@@' in line[2:]:
+                if stripped.startswith('@@') and '@@' in stripped[2:]:
                     diff_removed += 1
                     continue
-                
-                # + 로 시작하는 줄: prefix 제거하고 추가
-                if line.startswith('+ ') or line.startswith('+\t'):
-                    converted_lines.append(line[1:])  # '+' 제거, 공백/탭 유지
-                    diff_converted += 1
-                    continue
-                elif line == '+':  # 빈 줄 추가
+
+                # + 로 시작하는 줄: prefix 제거 (들여쓰기 보존)
+                # 패턴: "    + code" 또는 "+ code" 또는 "+\tcode"
+                if stripped.startswith('+ ') or stripped.startswith('+\t'):
+                    # 들여쓰기 찾기: line에서 '+'의 위치 찾아서 그 이후 부분 추출
+                    plus_idx = line.find('+')
+                    if plus_idx >= 0:
+                        # '+' 제거하고 나머지 (공백 포함) 유지
+                        new_line = line[:plus_idx] + line[plus_idx + 1:]
+                        # 맨 앞 공백 하나 제거 (+ 뒤의 공백)
+                        if new_line[plus_idx:plus_idx + 1] == ' ':
+                            new_line = new_line[:plus_idx] + new_line[plus_idx + 1:]
+                        converted_lines.append(new_line)
+                        diff_converted += 1
+                        continue
+                elif stripped == '+':  # 빈 줄 추가
                     converted_lines.append('')
                     diff_converted += 1
                     continue
-                
+
                 # - 로 시작하는 줄: 삭제된 줄이므로 제거
-                if line.startswith('- ') or line.startswith('-\t') or line == '-':
+                if stripped.startswith('- ') or stripped.startswith('-\t') or stripped == '-':
                     diff_removed += 1
                     continue
-                
+
                 # 일반 줄 (컨텍스트)
                 converted_lines.append(line)
             else:
+                # 코드 블록 외부에서도 명백한 diff 패턴 제거
+                stripped = line.strip()
+                if stripped.startswith('@@') and '@@' in stripped[2:]:
+                    diff_removed += 1
+                    continue
                 converted_lines.append(line)
-        
+
         if diff_converted > 0 or diff_removed > 0:
             code_output = '\n'.join(converted_lines)
             result["cleaned"] = True

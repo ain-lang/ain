@@ -21,15 +21,24 @@ from collections import defaultdict
 class ErrorMemory:
     """
     실패 기억 저장소
-    
+
     - 파일별 오류 기록 저장
-    - 자주 발생하는 오류 패턴 추적
+    - 자주 발생하는 오류 패턴 추적 (임계값 기반 강화 힌트)
     - Coder 프롬프트용 힌트 생성
     """
-    
+
     MEMORY_FILE = "error_memory.json"
     MAX_ERRORS_PER_FILE = 5  # 파일당 최대 기록 수
     MAX_TOTAL_ERRORS = 50    # 전체 최대 기록 수
+
+    # 🚨 임계값 기반 강화 경고 설정
+    CRITICAL_THRESHOLD = 3   # 이 횟수 이상이면 긴급 경고
+
+    # 특별 관리 패턴 (diff 관련)
+    DIFF_PATTERNS = frozenset([
+        "diff", "diff format", "diff 형식", "+/-",
+        "conflict marker", "충돌 마커", "git conflict"
+    ])
     
     def __init__(self):
         self.errors: Dict[str, List[Dict]] = defaultdict(list)
@@ -112,53 +121,90 @@ class ErrorMemory:
     def get_common_errors(self, limit: int = 5) -> str:
         """
         자주 발생하는 오류 패턴 반환
-        
+
         Args:
             limit: 반환할 최대 패턴 수
-        
+
         Returns:
             자주 발생하는 오류 목록 문자열
         """
         if not self.patterns:
             return ""
-        
+
         # 빈도순 정렬
         sorted_patterns = sorted(
-            self.patterns.items(), 
-            key=lambda x: x[1], 
+            self.patterns.items(),
+            key=lambda x: x[1],
             reverse=True
         )[:limit]
-        
+
         lines = ["⚠️ 자주 발생하는 오류 패턴 (반드시 피하라):"]
         for pattern, count in sorted_patterns:
             lines.append(f"  - {pattern} ({count}회)")
-        
+
         return "\n".join(lines)
+
+    def _is_diff_related(self, error_type: str) -> bool:
+        """diff 관련 에러인지 확인"""
+        error_lower = error_type.lower()
+        return any(p in error_lower for p in self.DIFF_PATTERNS)
+
+    def get_critical_warnings(self) -> str:
+        """
+        임계값 초과한 패턴에 대한 긴급 경고 생성
+
+        Returns:
+            긴급 경고 문자열 (없으면 빈 문자열)
+        """
+        critical = []
+
+        for pattern, count in self.patterns.items():
+            if count >= self.CRITICAL_THRESHOLD:
+                # diff 관련 패턴은 더 강한 경고
+                if self._is_diff_related(pattern):
+                    critical.append(
+                        f"⛔️⛔️⛔️ [{pattern}] {count}회 반복됨!\n"
+                        f"   줄 시작에 '+ ' 또는 '- '를 절대 쓰지 마라.\n"
+                        f"   전체 파일을 처음부터 끝까지 새로 작성하라."
+                    )
+                else:
+                    critical.append(
+                        f"🚨 [{pattern}] {count}회 반복됨! 반드시 피하라."
+                    )
+
+        if critical:
+            return "═══ 긴급 경고 (임계값 초과) ═══\n" + "\n".join(critical)
+        return ""
     
     def get_all_hints(self, target_files: List[str] = None) -> str:
         """
         Coder 프롬프트용 종합 힌트 생성
-        
+
         Args:
             target_files: 수정 대상 파일 목록 (선택)
-        
+
         Returns:
             종합 힌트 문자열
         """
         hints = []
-        
+
+        # 🚨 긴급 경고 (임계값 초과 패턴) - 최우선
+        critical = self.get_critical_warnings()
+        if critical:
+            hints.append(critical)
+
         # 공통 오류 패턴
         common = self.get_common_errors(3)
         if common:
             hints.append(common)
-        
+
         # 대상 파일별 오류 기록
         if target_files:
             for f in target_files:
                 file_hint = self.get_hints_for_file(f)
                 if file_hint:
                     hints.append(file_hint)
-        
+
         return "\n\n".join(hints) if hints else ""
     
     def clear_file(self, filename: str):
