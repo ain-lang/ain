@@ -7,7 +7,7 @@ Muse Dreamer 파이프라인
 import re
 from typing import Dict, Any, Optional
 
-from .utils import compress_context, get_current_roadmap_step, get_recent_evolutions
+from .utils import compress_context, get_current_roadmap_step, get_recent_evolutions, get_file_sizes_info
 
 
 def extract_intent(dreamer_response: str) -> str:
@@ -51,6 +51,7 @@ def build_dream_prompt(
     current_step: str,
     step_status: str,
     recent_evolutions: str,
+    file_sizes_info: str,
     error_context: Optional[str] = None,
     user_query: Optional[str] = None
 ) -> str:
@@ -93,13 +94,16 @@ def build_dream_prompt(
 
 [🏗️ 모듈 설계 원칙]
 - 파일당 100줄 이하 권장 (최대 150줄)
-- 새 기능은 별도 파일로 생성 (utils/*.py 등)
+- 새 기능은 별도 파일로 생성 (engine/*.py, utils/*.py 등)
+- 기존 파일 수정보다 새 모듈 생성 우선!
 
 [🚫 대형 파일 수정 금지 - 중요!]
-- overseer.py, muse.py 등 200줄 이상의 파일은 절대 직접 수정하지 마라!
+- 150줄 이상의 파일은 절대 직접 수정하지 마라!
 - 대형 파일 수정 시 토큰 한계로 코드가 잘려서 오류가 발생한다.
 - 대신: 새로운 모듈 파일(engine/xxx.py, utils/xxx.py)을 만들고, 대형 파일에서는 import만 추가하라.
 - 예시: nexus.py에 기능 추가 → nexus_helper.py 또는 utils/memory.py 생성 → nexus.py에서 import
+
+{file_sizes_info}
 
 [출력 규칙]
 - 반드시 첫 줄에 `SYSTEM_INTENT: (의도)`를 작성하라.
@@ -151,7 +155,10 @@ def run_dreamer_pipeline(
     # 4. 최근 진화 기록
     recent_evolutions = get_recent_evolutions(5)
 
-    # 5. 프롬프트 구성
+    # 5. 실제 파일 크기 정보 (hallucination 방지)
+    file_sizes_info = get_file_sizes_info()
+
+    # 6. 프롬프트 구성
     print(f"🧠 Dreamer가 진화 방향을 구상 중... ({current_step})")
 
     dream_prompt = build_dream_prompt(
@@ -160,11 +167,12 @@ def run_dreamer_pipeline(
         current_step=current_step,
         step_status=step_status,
         recent_evolutions=recent_evolutions,
+        file_sizes_info=file_sizes_info,
         error_context=error_context,
         user_query=user_query
     )
 
-    # 6. Dreamer 호출
+    # 7. Dreamer 호출
     dream_result = dreamer_client.chat([
         {"role": "system", "content": "You are the Dreamer (Architect) of AIN. Design the next evolution step. Focus on logic and architecture."},
         {"role": "user", "content": dream_prompt}

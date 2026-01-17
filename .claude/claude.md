@@ -190,6 +190,23 @@ elif stripped == '=======':  # 기존: '=======' in stripped
 has_separator = any(line.strip() == '=======' for line in code_output.split('\n'))
 ```
 
+### 15. ✅ Dreamer 파일 크기 hallucination (2026-01-17)
+**증상**: "meta_cognition.py 369줄 대형 파일"이라고 하지만 실제는 84줄
+**원인**: Dreamer에게 실제 파일 크기 정보가 전달되지 않아 hallucination 발생
+**근본 해결**: `muse/utils.py`에 `get_file_sizes_info()` 함수 추가
+- 모든 주요 디렉토리의 `.py` 파일 크기를 실제로 측정
+- 150줄 기준 ✅소형/⚠️대형 표시
+- `muse/dreamer.py`에서 Dreamer 프롬프트에 실제 파일 크기 정보 전달
+```python
+# muse/utils.py
+def get_file_sizes_info(directories: List[str] = None) -> str:
+    # 실제 파일 크기 측정하여 Dreamer에게 전달
+
+# muse/dreamer.py
+file_sizes_info = get_file_sizes_info()
+# 프롬프트에 {file_sizes_info} 포함
+```
+
 ---
 
 ## 미해결 문제점

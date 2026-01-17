@@ -3,8 +3,10 @@ Muse 유틸리티 함수들
 - 컨텍스트 압축
 - 로드맵 단계 파악
 - 최근 진화 기록 조회
+- 파일 크기 정보 생성
 """
 
+import os
 import json
 from typing import Optional, List
 
@@ -65,3 +67,37 @@ def get_recent_evolutions(limit: int = 5) -> str:
         return "\n".join(result) if result else "없음"
     except Exception:
         return "없음"
+
+
+def get_file_sizes_info(directories: List[str] = None) -> str:
+    """
+    주요 디렉토리의 파일 크기 정보를 생성하여 Dreamer에게 전달.
+    Dreamer의 파일 크기 hallucination 방지용.
+    """
+    if directories is None:
+        directories = ["engine", "muse", "nexus", "utils", "intention", "api", "database"]
+
+    lines = ["[📊 실제 파일 크기 정보 - 이 정보를 신뢰하라!]"]
+
+    for dir_name in directories:
+        if not os.path.isdir(dir_name):
+            continue
+
+        dir_files = []
+        for f in os.listdir(dir_name):
+            if f.endswith(".py") and not f.startswith("__"):
+                filepath = os.path.join(dir_name, f)
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as file:
+                        line_count = sum(1 for _ in file)
+                    status = "⚠️대형" if line_count > 150 else "✅소형"
+                    dir_files.append(f"  - {f}: {line_count}줄 {status}")
+                except Exception:
+                    pass
+
+        if dir_files:
+            lines.append(f"\n{dir_name}/:")
+            lines.extend(sorted(dir_files))
+
+    lines.append("\n⚠️ 위 정보가 실제 파일 크기다. 추측하지 마라!")
+    return "\n".join(lines)
