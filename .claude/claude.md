@@ -136,6 +136,18 @@ def vector_memory(self):
 - `> 3` → `>= 1`로 변경
 - 단 1줄이라도 diff 형식이면 감지 및 자동 변환 시도
 
+### 12. ✅ Coder가 diff 형식 계속 사용 (2026-01-17)
+**증상**: 감지 기준 강화해도 "diff: 5줄" 에러 반복
+**원인**: Coder 시스템 프롬프트가 diff 금지를 충분히 강조하지 않음
+**근본 해결**: `muse.py:317-330` 시스템 프롬프트 강화
+```
+CRITICAL RULES:
+1. Output the COMPLETE file content
+2. NEVER use diff format - lines starting with `+ ` or `- ` are FORBIDDEN
+3. NEVER use `@@`, `<<<`, `===`, `>>>` markers
+4. If you use diff format, the system will REJECT your output
+```
+
 ---
 
 ## 미해결 문제점
