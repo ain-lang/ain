@@ -130,7 +130,7 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
         if l.strip().startswith('+ ') or l.strip().startswith('- ')
     ]
     result["diff_count"] = len(diff_indicators)
-    has_diff_format = len(diff_indicators) > 3 or '@@ ' in code_output
+    has_diff_format = len(diff_indicators) >= 1 or '@@ ' in code_output
     
     # 🔧 Diff 형식 자동 변환 (코드 블록 내부에서만)
     if has_diff_format:
@@ -187,7 +187,7 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
         l for l in final_lines 
         if l.strip().startswith('+ ') or l.strip().startswith('- ')
     ]
-    result["has_diff"] = len(remaining_diff) > 3 or '@@ ' in code_output
+    result["has_diff"] = len(remaining_diff) >= 1 or '@@ ' in code_output
     
     # ─────────────────────────────────────────────────────────────────────────
     # Step 6: 구문 오류 자가 치유 (Unterminated String Literal 등)

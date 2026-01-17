@@ -114,6 +114,27 @@
 - Step 완료 후 `fact_core.json` 변경사항 자동 Git 커밋/푸시
 - 영속성 보장으로 다음 배포에서도 Step 진행 상태 유지
 
+### 10. ✅ consciousness.py가 벡터 메모리에 접근 못함 (2026-01-17)
+**증상**: 독백에서 "텅 빈 기억", "참조할 기억 없이" 반복
+**원인**: `Nexus` 클래스가 `_vector_memory` (private)만 선언하고 public property 미노출
+- `consciousness.py`는 `self.nexus.vector_memory` 접근 시도
+- `hasattr(self.nexus, 'vector_memory')` → 항상 False
+- 벡터 메모리 저장/검색 전혀 실행 안 됨
+**근본 해결**: `nexus/__init__.py:61-64` property 추가
+```python
+@property
+def vector_memory(self):
+    return self._vector_memory
+```
+
+### 11. ✅ Coder diff 형식 감지 기준 너무 관대 (2026-01-17)
+**증상**: "Git 충돌 마커 또는 diff 형식(+/-)이 감지됨" 에러
+**원인**: `code_sanitizer.py`에서 diff 감지 기준이 `> 3`으로 설정
+- 1-3줄의 diff 패턴은 감지 안 되고 통과
+**근본 해결**: `code_sanitizer.py:133, 190` 기준 변경
+- `> 3` → `>= 1`로 변경
+- 단 1줄이라도 diff 형식이면 감지 및 자동 변환 시도
+
 ---
 
 ## 미해결 문제점
@@ -126,16 +147,19 @@
 **위치**: `code_sanitizer.py:193-205`
 **TODO**: 대형 파일 동적 체크 (줄 수 기반)
 
-### 2. ✅ 독백이 "빈 데이터" 반복 (해결됨)
+### 2. ✅ 독백이 "빈 데이터" 반복 (해결됨 - 2가지 원인)
 **증상**: "텅 빈 기억 속에서", "참조할 기억 없이" 동일한 내용 반복
-**원인**: Railway에서 LanceDB 데이터가 영속되지 않음
+**원인 A**: Railway에서 LanceDB 데이터가 영속되지 않음
 - `database/lance_bridge.py:39`의 `DEFAULT_DB_PATH = "/data/lancedb"`
 - Railway 컨테이너 재배포 시 `/data/` 폴더 초기화 → 벡터 메모리 삭제
-**해결 (2026-01-17)**:
+**해결 A (2026-01-17)**:
 - Railway CLI로 볼륨 추가: `railway volume add -m /data`
 - 볼륨명: `ain-core-volume`
 - 마운트 경로: `/data` (50GB)
 - 재배포 후에도 벡터 메모리 영속
+**원인 B**: Nexus가 vector_memory public property 미노출
+- `consciousness.py`가 `self.nexus.vector_memory` 접근 불가
+**해결 B (2026-01-17)**: → 해결된 문제점 #10 참조
 
 ---
 
@@ -301,4 +325,4 @@ railway logs -n 100
 
 ---
 
-*마지막 업데이트: 2026-01-16*
+*마지막 업데이트: 2026-01-17*

@@ -53,7 +53,16 @@ class Nexus(NexusCore):
         self._lance_connected = self._vector_memory.is_connected
         self._evolution_history_cache = self._history.evolution_cache
         self._dialogue_cache = self._history._dialogue_cache
-    
+
+    # =========================================================================
+    # Properties (consciousness.py에서 사용)
+    # =========================================================================
+
+    @property
+    def vector_memory(self):
+        """벡터 메모리 인스턴스 (외부 접근용)"""
+        return self._vector_memory
+
     # =========================================================================
     # 하위 호환성 메서드 (기존 인터페이스 유지)
     # =========================================================================
