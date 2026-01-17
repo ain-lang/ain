@@ -3,6 +3,7 @@ import os
 from api import OpenRouterClient
 from code_sanitizer import sanitize_code_output, get_error_message, is_valid_output
 from utils.error_memory import get_error_memory
+from utils.file_size_guard import validate_coder_output, get_rejection_message
 from engine.roadmap_checker import get_roadmap_checker
 
 class Muse:
@@ -537,5 +538,20 @@ FILE: filename.py
                 "updates": [], 
                 "error": f"Coder가 규격에 맞는 코드를 생성하지 못했습니다.\n\n[응답 샘플 (처음 500자)]\n{sample_display}"
             }
+
+        # 🛡️ [대형 파일 보호] Coder가 대형 파일 수정 시도 시 거부
+        if updates:
+            valid_updates, rejected = validate_coder_output(updates)
+            if rejected:
+                rejection_msg = get_rejection_message(rejected)
+                print(f"🚫 [Muse] 대형 파일 수정 거부:\n{rejection_msg}")
+                # 거부된 파일이 있으면 경고와 함께 유효한 것만 진행
+                if not valid_updates:
+                    return {
+                        "intent": intent,
+                        "updates": [],
+                        "error": f"모든 파일이 대형 파일 보호에 의해 거부됨.\n{rejection_msg}"
+                    }
+                updates = valid_updates
 
         return {"intent": intent, "updates": updates}
