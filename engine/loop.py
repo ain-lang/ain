@@ -33,6 +33,13 @@ def run_engine():
     except Exception as e:
         print(f"⚠️ 의식 시스템 초기화 실패: {e}")
 
+    # 목표 관리 시스템 초기화 (GoalManagerMixin)
+    try:
+        ain.init_intention_system()
+        print("🎯 목표 관리 시스템 활성화")
+    except Exception as e:
+        print(f"⚠️ 목표 관리 시스템 초기화 실패: {e}")
+
     ain.report_status()
 
     last_update_id = 0

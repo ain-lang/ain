@@ -34,6 +34,14 @@ class IntrospectMixin:
             if user_query and self.handle_command(user_query):
                 return
 
+            # 🎯 진화 전 목표 확인 (GoalManagerMixin)
+            try:
+                import asyncio
+                if hasattr(self, 'ensure_active_goals'):
+                    asyncio.run(self.ensure_active_goals())
+            except Exception as goal_err:
+                print(f"⚠️ 목표 확인 실패 (비치명적): {goal_err}")
+
             context = self.fact_core.get_system_snapshot()
             history = self.nexus.get_evolution_summary()
             
@@ -161,6 +169,19 @@ class IntrospectMixin:
                                     self.send_telegram_msg(f"🗺️ **로드맵 업데이트**\n{roadmap_result['message']}")
                             except Exception as roadmap_err:
                                 print(f"⚠️ 로드맵 체크 실패 (비치명적): {roadmap_err}")
+
+                            # 🧠 진화 후 메타인지 성찰 (MetaCognitionMixin)
+                            try:
+                                if hasattr(self, '_reflect_on_thinking'):
+                                    reflection = self._reflect_on_thinking()
+                                    if reflection.get("status") != "not_implemented":
+                                        print(f"🧠 메타인지 성찰: {reflection}")
+                                if hasattr(self, '_evaluate_decision_quality'):
+                                    quality = self._evaluate_decision_quality(intent[:100])
+                                    if quality != 0.5:  # 기본값이 아닌 경우만
+                                        print(f"🧠 결정 품질: {quality:.2f}")
+                            except Exception as meta_err:
+                                print(f"⚠️ 메타인지 실패 (비치명적): {meta_err}")
                         else:
                             # ⚠️ 변경사항 없음 - 원인 표시
                             stages = ' → '.join(debug.get('stages', []))
