@@ -159,16 +159,26 @@ def _try_last_resort_extraction(code_output: str, intent: str) -> Dict[str, Any]
     """마지막 시도: 코드 블록 + 의도에서 파일명 추론"""
     last_resort = re.search(r'```(?:python|py)?\s*(.*?)```', code_output, re.DOTALL)
 
-    if last_resort and len(last_resort.group(1).strip()) > 100:
+    if last_resort:
         fallback_code = last_resort.group(1).strip()
-        file_hint = re.search(r'([\w/]+\.py)', intent)
+        code_len = len(fallback_code)
 
-        if file_hint:
-            fallback_filename = file_hint.group(1)
-            print(f"🔄 [Muse] 마지막 시도: {fallback_filename}로 코드 추출 ({len(fallback_code)} bytes)")
-            return {"updates": [{"filename": fallback_filename, "code": fallback_code}]}
+        # 50자 이상이면 파일명 추론 시도 (기존 100자에서 완화)
+        if code_len >= 50:
+            file_hint = re.search(r'([\w/]+\.py)', intent)
+
+            if file_hint:
+                fallback_filename = file_hint.group(1)
+                print(f"🔄 [Muse] 마지막 시도: {fallback_filename}로 코드 추출 ({code_len} bytes)")
+                return {"updates": [{"filename": fallback_filename, "code": fallback_code}]}
+            else:
+                print("⚠️ [Muse] 파일명 추론 실패, 진화 스킵")
+                return {"updates": [], "error": "파일명 추론 실패"}
         else:
-            print("⚠️ [Muse] 파일명 추론 실패, 진화 스킵")
-            return {"updates": [], "error": "파일명 추론 실패"}
+            # 코드 블록은 있지만 너무 짧음
+            print(f"⚠️ [Muse] 코드 블록이 너무 짧음 ({code_len}자 < 50자)")
+            return {"updates": [], "error": f"코드 블록이 너무 짧음 ({code_len}자)"}
 
-    return {}
+    # 코드 블록 자체가 없음 - 빈 dict 대신 에러 반환
+    print("⚠️ [Muse] 코드 블록(```)을 찾을 수 없음")
+    return {"updates": [], "error": "코드 블록(```)을 찾을 수 없음"}

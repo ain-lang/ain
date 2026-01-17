@@ -189,20 +189,47 @@ class GitHubClient:
                 if remote_head and new_sha and remote_head != new_sha:
                     print(f"⚠️ 원격 HEAD({remote_head[:8]})와 로컬({new_sha[:8]})이 다름! Force Push 시도...")
                     debug["stages"].append(f"mismatch: {remote_head[:8]} != {new_sha[:8]}")
-                    
-                    # 🚀 Force Push 재시도 (Railway 환경 대응)
-                    force_result = subprocess.run(
-                        [git_path, "push", "--force", remote_url, f"HEAD:{branch}"],
-                        capture_output=True, text=True
-                    )
-                    print(f"📤 Force Push 결과: code={force_result.returncode}")
-                    print(f"   stderr: {force_result.stderr[:200] if force_result.stderr else '(empty)'}")
-                    
+
+                    # 🔄 Force Push 전 remote URL 재설정 (토큰 갱신)
+                    subprocess.run([git_path, "remote", "set-url", "origin", remote_url], check=False)
+
+                    # 🔄 최신 원격 상태 fetch (히스토리 동기화)
+                    subprocess.run([git_path, "fetch", "origin", branch], capture_output=True, timeout=30)
+
+                    # 🚀 Force Push 재시도 (최대 3회)
+                    force_success = False
+                    for attempt in range(1, 4):
+                        print(f"📤 Force Push 시도 {attempt}/3...")
+                        force_result = subprocess.run(
+                            [git_path, "push", "--force-with-lease", remote_url, f"HEAD:{branch}"],
+                            capture_output=True, text=True
+                        )
+
+                        # --force-with-lease 실패 시 --force로 재시도
+                        if force_result.returncode != 0 and attempt < 3:
+                            force_result = subprocess.run(
+                                [git_path, "push", "--force", remote_url, f"HEAD:{branch}"],
+                                capture_output=True, text=True
+                            )
+
+                        print(f"   결과: code={force_result.returncode}")
+                        if force_result.stderr:
+                            print(f"   stderr: {force_result.stderr[:200]}")
+
+                        if force_result.returncode == 0:
+                            force_success = True
+                            break
+
+                        # 재시도 전 잠시 대기
+                        import time
+                        time.sleep(1)
+
                     # Force push stdout/stderr 기록
                     debug["force_stdout"] = force_result.stdout[:300] if force_result.stdout else ""
                     debug["force_stderr"] = force_result.stderr[:300] if force_result.stderr else ""
-                    
-                    if force_result.returncode == 0:
+                    debug["force_attempts"] = attempt
+
+                    if force_success:
                         # 재확인
                         verify = subprocess.run(
                             [git_path, "ls-remote", remote_url, f"refs/heads/{branch}"],
