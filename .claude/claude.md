@@ -195,6 +195,70 @@ git reset --hard HEAD~1  # 마지막 커밋 롤백
 
 ---
 
+## Railway CLI 가이드
+
+### 설치 및 로그인
+```bash
+# 설치 (macOS)
+brew install railway
+
+# 로그인
+railway login
+
+# 프로젝트 연결 (ain 디렉토리에서)
+railway link
+```
+
+### 자주 쓰는 명령어
+```bash
+# 로그 실시간 확인
+railway logs -f
+
+# 환경변수 확인
+railway variables
+
+# 환경변수 설정
+railway variables set KEY=VALUE
+
+# 배포 상태 확인
+railway status
+
+# 수동 배포
+railway up
+
+# 서비스 재시작
+railway service restart
+```
+
+### 볼륨 관련 (벡터 메모리 영속성)
+```bash
+# 볼륨 목록 확인
+railway volume list
+
+# 볼륨 추가 (대시보드에서 권장)
+# Settings → Volumes → Add Volume
+# Mount Path: /data
+# Size: 1GB
+```
+
+### 디버깅
+```bash
+# 컨테이너 쉘 접속
+railway shell
+
+# 특정 서비스 로그
+railway logs --service <service-name>
+
+# 최근 N줄 로그
+railway logs -n 100
+```
+
+### Railway 대시보드
+- URL: https://railway.app/dashboard
+- 프로젝트: ain-lang/ain
+
+---
+
 ## 다음 할 일
 
 1. [x] `muse.py`에 `_ask_dreamer()` 메서드 추가 ✅
