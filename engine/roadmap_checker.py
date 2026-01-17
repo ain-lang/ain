@@ -4,47 +4,13 @@ Engine Roadmap Checker: 진화 후 로드맵 완료 상태 자동 체크
 진화가 성공하면 현재 Step 완료 여부를 확인하고,
 완료되었으면 자동으로 다음 Step으로 이동하고 Git 커밋/푸시
 """
+
 import os
 import json
-import subprocess
 from typing import Dict, Tuple, Optional
 
-
-# Step 완료 조건 정의 (파일/클래스 존재 여부로 판단)
-STEP_COMPLETION_CRITERIA = {
-    "step_4_vector_memory": {
-        "name": "Vector Memory",
-        "checks": [
-            ("nexus/retrieval.py", "RetrievalMixin"),
-            ("nexus/memory.py", "VectorMemory"),
-        ],
-        "next_step": "step_5_inner_monologue"
-    },
-    "step_5_inner_monologue": {
-        "name": "Inner Monologue",
-        "checks": [
-            ("engine/consciousness.py", "ConsciousnessMixin"),
-            ("engine/consciousness.py", "_inner_monologue"),
-        ],
-        "next_step": "step_6_intentionality"
-    },
-    "step_6_intentionality": {
-        "name": "Intentionality",
-        "checks": [
-            ("engine/goal_manager.py", "GoalManagerMixin"),
-            ("engine/__init__.py", "GoalManagerMixin"),  # AINCore에 상속 여부
-            ("engine/goal_executor.py", "GoalExecutor"),
-        ],
-        "next_step": "step_7_meta_cognition"
-    },
-    "step_7_meta_cognition": {
-        "name": "Meta-Cognition",
-        "checks": [
-            ("engine/meta_cognition.py", "MetaCognitionMixin"),
-        ],
-        "next_step": "step_8_intuition"
-    },
-}
+from .roadmap_criteria import STEP_COMPLETION_CRITERIA
+from .roadmap_git import commit_and_push_roadmap
 
 
 class RoadmapChecker:
@@ -55,12 +21,7 @@ class RoadmapChecker:
         self.fact_core_path = os.path.join(base_path, "fact_core.json")
 
     def check_step_completion(self, step_id: str) -> Tuple[bool, str]:
-        """
-        특정 Step의 완료 여부 확인
-
-        Returns:
-            (완료 여부, 상세 메시지)
-        """
+        """특정 Step의 완료 여부 확인"""
         if step_id not in STEP_COMPLETION_CRITERIA:
             return False, f"알 수 없는 Step: {step_id}"
 
@@ -111,10 +72,9 @@ class RoadmapChecker:
             data["roadmap"]["current_focus"] = new_focus
 
             # 이전 Step 완료 표시
-            if old_focus and old_focus in data["roadmap"].get("phase_2_memory", {}):
-                data["roadmap"]["phase_2_memory"][old_focus]["status"] = "completed"
-            if old_focus and old_focus in data["roadmap"].get("phase_3_awakening", {}):
-                data["roadmap"]["phase_3_awakening"][old_focus]["status"] = "completed"
+            for phase in ["phase_2_memory", "phase_3_awakening"]:
+                if old_focus and old_focus in data["roadmap"].get(phase, {}):
+                    data["roadmap"][phase][old_focus]["status"] = "completed"
 
             # 새 Step in_progress 표시
             for phase in ["phase_2_memory", "phase_3_awakening", "phase_4_consciousness"]:
@@ -129,66 +89,8 @@ class RoadmapChecker:
             print(f"⚠️ fact_core.json 업데이트 실패: {e}")
             return False
 
-    def _commit_and_push_roadmap(self, completed_step: str, next_step: str) -> bool:
-        """
-        fact_core.json 변경사항을 Git에 커밋하고 푸시
-        Step 완료 시 영속성을 보장하기 위함
-        """
-        try:
-            commit_msg = f"roadmap: {completed_step} 완료 → {next_step} 시작"
-
-            # Git add
-            subprocess.run(
-                ["git", "add", self.fact_core_path],
-                cwd=self.base_path,
-                capture_output=True,
-                timeout=30
-            )
-
-            # Git commit
-            result = subprocess.run(
-                ["git", "commit", "-m", commit_msg],
-                cwd=self.base_path,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-
-            if result.returncode != 0:
-                if "nothing to commit" in result.stdout.lower():
-                    print("ℹ️ 로드맵: 커밋할 변경사항 없음")
-                    return True
-                print(f"⚠️ 로드맵 커밋 실패: {result.stderr}")
-                return False
-
-            # Git push
-            push_result = subprocess.run(
-                ["git", "push"],
-                cwd=self.base_path,
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
-
-            if push_result.returncode == 0:
-                print(f"✅ 로드맵 업데이트 푸시 완료: {commit_msg}")
-                return True
-            else:
-                print(f"⚠️ 로드맵 푸시 실패: {push_result.stderr}")
-                return False
-
-        except subprocess.TimeoutExpired:
-            print("⚠️ 로드맵 Git 작업 타임아웃")
-            return False
-        except Exception as e:
-            print(f"⚠️ 로드맵 Git 작업 오류: {e}")
-            return False
-
     def get_current_status_for_dreamer(self) -> str:
-        """
-        Dreamer에게 전달할 현재 Step 완료 상태 문자열 반환
-        하드코딩된 프롬프트 대신 이 결과를 사용
-        """
+        """Dreamer에게 전달할 현재 Step 완료 상태 문자열 반환"""
         current = self.get_current_focus()
         if not current or current not in STEP_COMPLETION_CRITERIA:
             return "현재 Step 정보 없음"
@@ -207,22 +109,13 @@ class RoadmapChecker:
         return "\n".join(lines)
 
     def check_and_advance(self) -> Dict:
-        """
-        현재 Step 완료 여부 확인 후 자동 진행
-
-        Returns:
-            {
-                "step_completed": bool,
-                "old_step": str,
-                "new_step": str,
-                "message": str
-            }
-        """
+        """현재 Step 완료 여부 확인 후 자동 진행"""
         result = {
             "step_completed": False,
             "old_step": None,
             "new_step": None,
-            "message": ""
+            "message": "",
+            "git_pushed": False
         }
 
         current = self.get_current_focus()
@@ -232,11 +125,9 @@ class RoadmapChecker:
 
         result["old_step"] = current
 
-        # 현재 Step 완료 여부 확인
         is_complete, detail = self.check_step_completion(current)
 
         if is_complete:
-            # 다음 Step으로 이동
             criteria = STEP_COMPLETION_CRITERIA.get(current, {})
             next_step = criteria.get("next_step")
 
@@ -245,11 +136,13 @@ class RoadmapChecker:
                     result["step_completed"] = True
                     result["new_step"] = next_step
                     result["message"] = f"🎉 {criteria['name']} 완료! → {next_step} 시작"
-                    # Git 커밋/푸시로 영속성 보장
-                    git_result = self._commit_and_push_roadmap(
+
+                    success, msg = commit_and_push_roadmap(
+                        self.base_path, self.fact_core_path,
                         criteria['name'], next_step
                     )
-                    result["git_pushed"] = git_result
+                    result["git_pushed"] = success
+                    print(msg)
                 else:
                     result["message"] = f"Step 완료됐지만 fact_core 업데이트 실패"
             else:
