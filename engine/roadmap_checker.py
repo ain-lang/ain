@@ -2,10 +2,11 @@
 Engine Roadmap Checker: 진화 후 로드맵 완료 상태 자동 체크
 ==========================================================
 진화가 성공하면 현재 Step 완료 여부를 확인하고,
-완료되었으면 자동으로 다음 Step으로 이동
+완료되었으면 자동으로 다음 Step으로 이동하고 Git 커밋/푸시
 """
 import os
 import json
+import subprocess
 from typing import Dict, Tuple, Optional
 
 
@@ -128,6 +129,61 @@ class RoadmapChecker:
             print(f"⚠️ fact_core.json 업데이트 실패: {e}")
             return False
 
+    def _commit_and_push_roadmap(self, completed_step: str, next_step: str) -> bool:
+        """
+        fact_core.json 변경사항을 Git에 커밋하고 푸시
+        Step 완료 시 영속성을 보장하기 위함
+        """
+        try:
+            commit_msg = f"roadmap: {completed_step} 완료 → {next_step} 시작"
+
+            # Git add
+            subprocess.run(
+                ["git", "add", self.fact_core_path],
+                cwd=self.base_path,
+                capture_output=True,
+                timeout=30
+            )
+
+            # Git commit
+            result = subprocess.run(
+                ["git", "commit", "-m", commit_msg],
+                cwd=self.base_path,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                if "nothing to commit" in result.stdout.lower():
+                    print("ℹ️ 로드맵: 커밋할 변경사항 없음")
+                    return True
+                print(f"⚠️ 로드맵 커밋 실패: {result.stderr}")
+                return False
+
+            # Git push
+            push_result = subprocess.run(
+                ["git", "push"],
+                cwd=self.base_path,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            if push_result.returncode == 0:
+                print(f"✅ 로드맵 업데이트 푸시 완료: {commit_msg}")
+                return True
+            else:
+                print(f"⚠️ 로드맵 푸시 실패: {push_result.stderr}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print("⚠️ 로드맵 Git 작업 타임아웃")
+            return False
+        except Exception as e:
+            print(f"⚠️ 로드맵 Git 작업 오류: {e}")
+            return False
+
     def get_current_status_for_dreamer(self) -> str:
         """
         Dreamer에게 전달할 현재 Step 완료 상태 문자열 반환
@@ -189,6 +245,11 @@ class RoadmapChecker:
                     result["step_completed"] = True
                     result["new_step"] = next_step
                     result["message"] = f"🎉 {criteria['name']} 완료! → {next_step} 시작"
+                    # Git 커밋/푸시로 영속성 보장
+                    git_result = self._commit_and_push_roadmap(
+                        criteria['name'], next_step
+                    )
+                    result["git_pushed"] = git_result
                 else:
                     result["message"] = f"Step 완료됐지만 fact_core 업데이트 실패"
             else:

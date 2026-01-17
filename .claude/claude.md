@@ -38,11 +38,11 @@
 
 ---
 
-## 현재 상태 (2026-01-16)
+## 현재 상태 (2026-01-17)
 
 - **버전**: 0.3.0
-- **단계**: Phase 3, Step 6 (Intentionality) 🔥
-- **완료**: Step 1-5 (Brain, Logic, Bridge, Vector Memory, Inner Monologue)
+- **단계**: Phase 3, Step 7 (Meta-Cognition) 🔥
+- **완료**: Step 1-6 (Brain, Logic, Bridge, Vector Memory, Inner Monologue, Intentionality)
 - **GoalManagerMixin**: AINCore에 연결 완료 ✅
 
 ---
@@ -106,6 +106,14 @@
 - 진화 스킵 시에도 `roadmap_checker.check_and_advance()` 호출
 - Step 완료 시 `fact_core.json` 자동 업데이트 및 텔레그램 알림
 
+### 9. ✅ Step 완료 시 영속성 문제 (fact_core.json 업데이트 안 됨)
+**증상**: Step 6 완료 조건 모두 충족 → "Step 완료" 반복 → Step 7로 넘어가지 않음
+**원인**: `roadmap_checker.check_and_advance()`가 `fact_core.json` 업데이트해도 Git에 커밋/푸시 안 됨
+- Railway 재배포 시 원래 상태로 복원
+**근본 해결**: `roadmap_checker.py`에 `_commit_and_push_roadmap()` 메서드 추가
+- Step 완료 후 `fact_core.json` 변경사항 자동 Git 커밋/푸시
+- 영속성 보장으로 다음 배포에서도 Step 진행 상태 유지
+
 ---
 
 ## 미해결 문제점
@@ -117,6 +125,15 @@
 - `code_sanitizer.py`의 따옴표 자동 치유 불완전
 **위치**: `code_sanitizer.py:193-205`
 **TODO**: 대형 파일 동적 체크 (줄 수 기반)
+
+### 2. 독백이 "빈 데이터" 반복
+**증상**: "텅 빈 기억 속에서", "참조할 기억 없이" 동일한 내용 반복
+**원인**: Railway에서 LanceDB 데이터가 영속되지 않음
+- `database/lance_bridge.py:39`의 `DEFAULT_DB_PATH = "/data/lancedb"`
+- Railway 컨테이너 재배포 시 `/data/` 폴더 초기화 → 벡터 메모리 삭제
+**해결 방안**:
+- Railway 영구 볼륨 설정 필요
+- 또는 외부 벡터 DB (Pinecone, Weaviate) 전환
 
 ---
 
