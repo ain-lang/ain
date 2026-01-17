@@ -263,9 +263,11 @@ class Muse:
 **중요: 너는 기존 파일을 수정하는 것이 아니라, 완벽한 전체 코드를 처음부터 끝까지 새로 '작성'하는 역할이다.**
 
 [작성 규칙 - 위반 시 에러 발생]
-1. **전체 코드 출력**: 파일의 일부분이나 수정된 내용(diff)만 출력하는 것은 절대 금지된다. 반드시 `import`부터 끝까지 전체 코드를 작성하라.
-2. **마커 준수**: 파일 하나당 하나의 `FILE: 파일명.py` 마커와 하나의 코드 블록(```python ... ```)만 사용하라.
-3. **금지 기호**: `+`, `-`, `<<<<<<<`, `=======`, `>>>>>>>` 등 diff나 충돌 마커는 절대 포함하지 마라.
+1. **전체 코드 출력**: 파일의 일부분이나 diff만 출력 금지. 반드시 `import`부터 끝까지 전체 코드를 작성하라.
+2. **마커 준수**: 파일 하나당 `FILE: 파일명.py` 마커 + 코드 블록(```python ... ```) 하나만 사용.
+3. **⛔ DIFF 형식 절대 금지**: 줄 시작에 `+ `나 `- `(공백 포함)를 쓰면 자동 거부됨! `@@`, `<<<`, `===`, `>>>` 마커도 금지.
+   - ❌ 금지 예: `+ import foo` 또는 `- old_code()`
+   - ✅ 올바른 예: `import foo` (앞에 +/- 없이)
 4. **대형 파일 수정 금지**: overseer.py, muse.py 등 200줄 이상 파일은 절대 출력하지 마라. 새 모듈 파일만 생성하라.
 5. **생략 금지**: `# ...` 이나 `(기존 코드 생략)` 같은 표현은 절대 사용하지 마라.
 
@@ -310,23 +312,53 @@ import ...
             retry_hint = ""
             if last_error:
                 retry_hint = f"\n\n🚨 [이전 시도 실패 원인 - 반드시 수정!]\n{last_error}\n위 오류를 피해서 다시 작성하라."
+                # diff 형식 에러인 경우 추가 힌트
+                if "diff" in last_error.lower() or "+ " in last_error or "- " in last_error:
+                    retry_hint += """
+
+⛔️ DIFF 형식을 사용했기 때문에 거부되었다!
+줄 시작에 '+ ' 또는 '- '를 절대 쓰지 마라.
+예시:
+  ❌ 틀림: + import os
+  ✅ 올바름: import os
+전체 파일을 처음부터 끝까지 새로 작성하라."""
             
             current_prompt = coder_prompt + retry_hint
             
             print(f"💻 Coder 시도 {attempt}/{MAX_CODER_RETRIES}...")
             coder_system = """You are a File Content Generator.
 
+⛔️⛔️⛔️ ABSOLUTELY FORBIDDEN - DIFF FORMAT ⛔️⛔️⛔️
+DO NOT start any line with '+ ' or '- ' (plus/minus followed by space).
+DO NOT use '@@ ... @@' hunk markers.
+DO NOT show what to add/remove - output the FINAL complete file only.
+
+❌ WRONG (diff format - will be REJECTED):
+```python
++ import new_module
+- import old_module
+  def foo():
++     return new_value
+-     return old_value
+```
+
+✅ CORRECT (complete file - this is what you must output):
+```python
+import new_module
+
+def foo():
+    return new_value
+```
+
 CRITICAL RULES:
-1. Output the COMPLETE file content from `import` to the end
-2. NEVER use diff format - lines starting with `+ ` or `- ` are FORBIDDEN
-3. NEVER use `@@`, `<<<`, `===`, `>>>` markers
-4. Your output must be ready to OVERWRITE the existing file entirely
-5. If you use diff format, the system will REJECT your output and retry
+1. Output the COMPLETE file from first `import` to last line
+2. Your output will OVERWRITE the existing file entirely
+3. ANY line starting with '+ ' or '- ' = AUTOMATIC REJECTION
 
 OUTPUT FORMAT:
 FILE: filename.py
 ```python
-# Complete file content here
+# Complete file content here - NO + or - prefixes!
 ```"""
             coder_result = self.coder_client.chat([
                 {"role": "system", "content": coder_system},

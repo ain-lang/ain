@@ -136,16 +136,26 @@ def vector_memory(self):
 - `> 3` → `>= 1`로 변경
 - 단 1줄이라도 diff 형식이면 감지 및 자동 변환 시도
 
-### 12. ✅ Coder가 diff 형식 계속 사용 (2026-01-17)
-**증상**: 감지 기준 강화해도 "diff: 5줄" 에러 반복
-**원인**: Coder 시스템 프롬프트가 diff 금지를 충분히 강조하지 않음
-**근본 해결**: `muse.py:317-330` 시스템 프롬프트 강화
+### 12. ✅ Coder가 diff 형식 계속 사용 (2026-01-17, 추가 강화)
+**증상**: 감지 기준 강화해도 "diff: 15줄", "diff: 7줄" 에러 반복
+**원인**: Coder 시스템 프롬프트에 구체적인 예시가 없어서 LLM이 diff 형식 이해 못함
+**근본 해결**: `muse.py` 3곳 강화
+1. **coder_system** (317-350줄): 잘못된 예시 + 올바른 예시 추가
 ```
-CRITICAL RULES:
-1. Output the COMPLETE file content
-2. NEVER use diff format - lines starting with `+ ` or `- ` are FORBIDDEN
-3. NEVER use `@@`, `<<<`, `===`, `>>>` markers
-4. If you use diff format, the system will REJECT your output
+⛔️⛔️⛔️ ABSOLUTELY FORBIDDEN - DIFF FORMAT ⛔️⛔️⛔️
+❌ WRONG: + import new_module / - import old_module
+✅ CORRECT: import new_module (앞에 +/- 없이)
+```
+2. **coder_prompt** (265-272줄): 한국어로 diff 금지 명시 + 예시 추가
+```
+⛔ DIFF 형식 절대 금지: 줄 시작에 `+ `나 `- `(공백 포함)를 쓰면 자동 거부됨!
+❌ 금지 예: `+ import foo`
+✅ 올바른 예: `import foo`
+```
+3. **retry_hint** (315-324줄): diff 에러 시 추가 힌트 자동 삽입
+```
+⛔️ DIFF 형식을 사용했기 때문에 거부되었다!
+줄 시작에 '+ ' 또는 '- '를 절대 쓰지 마라.
 ```
 
 ---
