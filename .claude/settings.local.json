@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "Bash(git fetch:*)",
+      "Bash(railway redeploy:*)",
+      "Bash(railway up:*)",
+      "Bash(railway status:*)",
+      "Bash(railway:*)"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}
