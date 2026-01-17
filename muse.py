@@ -3,7 +3,7 @@ import os
 from api import OpenRouterClient
 from code_sanitizer import sanitize_code_output, get_error_message, is_valid_output
 from utils.error_memory import get_error_memory
-from utils.file_size_guard import validate_coder_output, get_rejection_message
+from utils.file_size_guard import validate_coder_output, get_rejection_message, get_context_hints_for_coder
 from engine.roadmap_checker import get_roadmap_checker
 
 class Muse:
@@ -302,7 +302,12 @@ import ...
         memory_hints = error_memory.get_all_hints(target_files)
         if memory_hints:
             coder_prompt += f"\n\n[🧠 과거 실패 기록 - 같은 실수 반복 금지!]\n{memory_hints}"
-        
+
+        # 🚨 대형 파일 컨텍스트 힌트 추가
+        large_file_hints = get_context_hints_for_coder(target_files)
+        if large_file_hints:
+            coder_prompt += f"\n\n{large_file_hints}"
+
         # 🔄 Coder 재시도 로직 (최대 5회)
         MAX_CODER_RETRIES = 5
         last_error = None
@@ -539,19 +544,26 @@ FILE: filename.py
                 "error": f"Coder가 규격에 맞는 코드를 생성하지 못했습니다.\n\n[응답 샘플 (처음 500자)]\n{sample_display}"
             }
 
-        # 🛡️ [대형 파일 보호] Coder가 대형 파일 수정 시도 시 거부
+        # 🛡️ [파일 보호] 절대 보호 파일 차단 + 대형 파일 경고
         if updates:
-            valid_updates, rejected = validate_coder_output(updates)
-            if rejected:
-                rejection_msg = get_rejection_message(rejected)
-                print(f"🚫 [Muse] 대형 파일 수정 거부:\n{rejection_msg}")
-                # 거부된 파일이 있으면 경고와 함께 유효한 것만 진행
+            valid_updates, warnings, blocked = validate_coder_output(updates)
+
+            # 절대 보호 파일 차단
+            if blocked:
+                rejection_msg = get_rejection_message(blocked)
+                print(f"🚫 [Muse] 절대 보호 파일 수정 차단:\n{rejection_msg}")
                 if not valid_updates:
                     return {
                         "intent": intent,
                         "updates": [],
-                        "error": f"모든 파일이 대형 파일 보호에 의해 거부됨.\n{rejection_msg}"
+                        "error": f"절대 보호 파일 수정 시도.\n{rejection_msg}"
                     }
-                updates = valid_updates
+
+            # 대형 파일 경고 (진행은 허용)
+            if warnings:
+                for w in warnings:
+                    print(f"⚠️ [Muse] 대형 파일 경고: {w['filename']} ({w['line_count']}줄 → {w['new_line_count']}줄)")
+
+            updates = valid_updates
 
         return {"intent": intent, "updates": updates}
