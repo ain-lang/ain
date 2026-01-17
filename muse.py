@@ -314,8 +314,22 @@ import ...
             current_prompt = coder_prompt + retry_hint
             
             print(f"💻 Coder 시도 {attempt}/{MAX_CODER_RETRIES}...")
+            coder_system = """You are a File Content Generator.
+
+CRITICAL RULES:
+1. Output the COMPLETE file content from `import` to the end
+2. NEVER use diff format - lines starting with `+ ` or `- ` are FORBIDDEN
+3. NEVER use `@@`, `<<<`, `===`, `>>>` markers
+4. Your output must be ready to OVERWRITE the existing file entirely
+5. If you use diff format, the system will REJECT your output and retry
+
+OUTPUT FORMAT:
+FILE: filename.py
+```python
+# Complete file content here
+```"""
             coder_result = self.coder_client.chat([
-                {"role": "system", "content": "You are a File Content Generator. You ALWAYS provide the full content of the file, never a diff or partial update. Your output must be ready to overwrite the existing file entirely."},
+                {"role": "system", "content": coder_system},
                 {"role": "user", "content": current_prompt}
             ], max_tokens=8192, timeout=180)
             
