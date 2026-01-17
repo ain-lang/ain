@@ -93,8 +93,8 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
             result["removed_lines"] += 1
             should_remove = True
         
-        # ======= 구분선 건너뛰기 (정확히 7개의 = 또는 그 이상)
-        elif '=======' in stripped and stripped.replace('=', '').strip() == '':
+        # ======= 구분선 건너뛰기 (정확히 7개 = 만, 문서 데코레이션 제외)
+        elif stripped == '=======':
             if verbose:
                 print("🔧 [Sanitizer] 충돌 구분선 제거")
             result["removed_lines"] += 1
@@ -117,9 +117,16 @@ def sanitize_code_output(code_output: str, verbose: bool = True) -> Tuple[str, d
             print(f"🔧 [Sanitizer] 충돌 마커 제거 완료: {len(lines)} -> {len(cleaned_lines)} 줄")
     
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 3: 잔여 충돌 마커 감지
+    # Step 3: 잔여 충돌 마커 감지 (개선됨)
+    # - '<<<<<<<'와 '>>>>>>>'는 substring으로 감지 (false positive 거의 없음)
+    # - '======='는 정확히 7개 =만 있는 독립 줄로만 감지 (문서 데코레이션과 구분)
     # ─────────────────────────────────────────────────────────────────────────
-    result["has_conflict"] = any(marker in code_output for marker in CONFLICT_MARKERS)
+    has_angle_markers = '<<<<<<<' in code_output or '>>>>>>>' in code_output
+    has_separator = any(
+        line.strip() == '======='
+        for line in code_output.split('\n')
+    )
+    result["has_conflict"] = has_angle_markers or has_separator
     
     # ─────────────────────────────────────────────────────────────────────────
     # Step 4: Diff 형식 감지 및 자동 변환

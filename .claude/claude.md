@@ -174,6 +174,22 @@ if rejected:
     return {"error": f"대형 파일 보호에 의해 거부됨.\n{rejection_msg}"}
 ```
 
+### 14. ✅ 충돌 마커 오감지 - 문서 데코레이션 제거됨 (2026-01-17)
+**증상**: "Git 충돌 마커" 에러가 문서 데코레이션 `========================================`에서 발생
+**원인**: `code_sanitizer.py`에서 충돌 마커 감지가 substring 매칭
+- `'=======' in code_output` → 40개 `=` 데코레이션에서도 True
+- Step 2 제거 로직도 "7개 이상 =만 있는 줄" 모두 제거
+**근본 해결**: `code_sanitizer.py:97, 124-129` 수정
+- Step 2: `stripped == '======='` (정확히 7개만 제거)
+- Step 3: 독립 줄로만 감지 (substring 매칭 제거)
+```python
+# Step 2: 정확히 7개 = 만 제거
+elif stripped == '=======':  # 기존: '=======' in stripped
+
+# Step 3: 독립 줄로만 감지
+has_separator = any(line.strip() == '=======' for line in code_output.split('\n'))
+```
+
 ---
 
 ## 미해결 문제점
