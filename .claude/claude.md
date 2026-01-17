@@ -126,14 +126,16 @@
 **위치**: `code_sanitizer.py:193-205`
 **TODO**: 대형 파일 동적 체크 (줄 수 기반)
 
-### 2. 독백이 "빈 데이터" 반복
+### 2. ✅ 독백이 "빈 데이터" 반복 (해결됨)
 **증상**: "텅 빈 기억 속에서", "참조할 기억 없이" 동일한 내용 반복
 **원인**: Railway에서 LanceDB 데이터가 영속되지 않음
 - `database/lance_bridge.py:39`의 `DEFAULT_DB_PATH = "/data/lancedb"`
 - Railway 컨테이너 재배포 시 `/data/` 폴더 초기화 → 벡터 메모리 삭제
-**해결 방안**:
-- Railway 영구 볼륨 설정 필요
-- 또는 외부 벡터 DB (Pinecone, Weaviate) 전환
+**해결 (2026-01-17)**:
+- Railway CLI로 볼륨 추가: `railway volume add -m /data`
+- 볼륨명: `ain-core-volume`
+- 마운트 경로: `/data` (50GB)
+- 재배포 후에도 벡터 메모리 영속
 
 ---
 
