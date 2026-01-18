@@ -4,6 +4,8 @@ Engine Evolution: 진화 사이클 로직
 import os
 import asyncio
 
+from utils.git_sync import sync_before_commit, verify_push
+
 
 class EvolutionMixin:
     """진화 로직 믹스인 - AINCore에서 사용"""
@@ -161,11 +163,23 @@ class EvolutionMixin:
                     return result
 
                 await self._sync_to_database()
-                
-                push_ok, push_msg, sha, _ = self.github.commit_and_push(f"🧬 Evolution: {result['action'][:80]}")
-                if push_ok:
+
+                # 커밋 전 원격과 동기화 (git_sync 모듈 사용)
+                synced, sync_msg = sync_before_commit()
+                if synced:
+                    print(f"🔄 {sync_msg}")
+
+                push_ok, push_msg, sha, _ = self.github.commit_and_push(f"Evolution: {result['action'][:80]}")
+                if push_ok and sha:
+                    # 푸시 후 검증 (git_sync 모듈 사용)
+                    verified, verify_msg = verify_push(sha)
                     result["commit_sha"] = sha
-                    print(f"✅ Git Push 성공: {sha}")
+                    if verified:
+                        print(f"✅ Git Push 성공: {verify_msg}")
+                    else:
+                        print(f"⚠️ Git Push 불일치: {verify_msg}")
+                elif push_ok:
+                    print(f"✅ Git Push 성공 (변경사항 없음)")
                 else:
                     print(f"⚠️ Git Push 실패: {push_msg}")
             else:

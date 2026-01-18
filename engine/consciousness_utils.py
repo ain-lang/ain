@@ -7,6 +7,8 @@ Consciousness 유틸리티 함수들
 from datetime import datetime
 from typing import Dict, Any, Optional, TYPE_CHECKING
 
+from utils.roadmap_utils import get_step_context
+
 if TYPE_CHECKING:
     from . import AINCore
 
@@ -24,21 +26,16 @@ def gather_internal_context(core: "AINCore") -> Dict[str, Any]:
     }
 
     try:
-        # 1. 로드맵 상태
+        # 1. 로드맵 상태 (roadmap_utils 사용 - 중첩 구조 올바르게 탐색)
         current_focus = core.fact_core.get_fact("roadmap", "current_focus", default="unknown")
         roadmap = core.fact_core.get_fact("roadmap", default={})
-        current_step_info = roadmap.get(current_focus, {})
-        context["roadmap_status"] = {
-            "current_focus": current_focus,
-            "step_name": current_step_info.get("name", "Unknown"),
-            "step_desc": current_step_info.get("desc", ""),
-            "phase": current_step_info.get("phase", 0),
-        }
+        context["roadmap_status"] = get_step_context(roadmap, current_focus)
         context["summary"]["focus"] = current_focus
 
         # 2. 벡터 메모리에서 관련 기억 검색
         if hasattr(core.nexus, 'vector_memory') and core.nexus.vector_memory.is_connected:
-            query = f"{current_step_info.get('name', '')} {current_step_info.get('desc', '')}"
+            roadmap_status = context["roadmap_status"]
+            query = f"{roadmap_status.get('step_name', '')} {roadmap_status.get('step_desc', '')}"
             if query.strip():
                 related_memories = core.nexus.vector_memory.search(query, limit=3)
                 context["recent_memories"] = [
