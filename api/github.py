@@ -292,60 +292,111 @@ class GitHubClient:
             return False, f"❌ Git Push 실패: {str(e)}", None, debug
     
     def _push_via_api(self, git_path: str, message: str, branch: str) -> str | None:
-        """Git push 실패 시 GitHub API로 대안 시도"""
+        """
+        Git push 실패 시 GitHub Git Data API로 실제 커밋 생성
+
+        기존 방식(update_file)은 파일별 개별 커밋 → 로컬 히스토리와 불일치
+        개선 방식: Tree → Commit → Ref 업데이트로 단일 커밋 생성
+        """
         try:
             if not self.repo:
                 print("❌ GitHub API repo 객체 없음")
                 return None
-            
+
             import subprocess
-            
-            # 변경된 파일 목록 가져오기
+            import base64
+
+            # 1. 변경된 파일 목록 가져오기
             diff_result = subprocess.run(
                 [git_path, "diff", "--name-only", f"origin/{branch}"],
                 capture_output=True, text=True
             )
             changed_files = [f.strip() for f in diff_result.stdout.strip().split('\n') if f.strip()]
-            
+
             if not changed_files:
                 print("⚠️ API push: 변경된 파일 없음")
                 return None
-            
-            print(f"📤 API push: {len(changed_files)} files")
-            
-            # 파일별로 업데이트 (최대 5개만)
-            for filepath in changed_files[:5]:
+
+            print(f"📤 API push (Git Data API): {len(changed_files)} files")
+
+            # 2. 현재 원격 HEAD SHA 가져오기
+            ref = self.repo.get_git_ref(f"heads/{branch}")
+            current_head_sha = ref.object.sha
+            print(f"  📍 현재 원격 HEAD: {current_head_sha[:8]}")
+
+            # 3. 현재 HEAD의 tree 가져오기
+            head_commit = self.repo.get_git_commit(current_head_sha)
+            base_tree_sha = head_commit.tree.sha
+
+            # 4. 변경된 파일들의 blob 생성 및 tree element 준비
+            tree_elements = []
+            for filepath in changed_files:
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         content = f.read()
-                    
-                    # 🚨 최종 안전 검사: 충돌 마커가 포함된 파일은 API로 푸시하지 않음
+
+                    # 충돌 마커 안전 검사
                     if any(m in content for m in ['<<<<<<<', '=======', '>>>>>>>']):
-                        print(f"  🚫 {filepath}: 충돌 마커 감지됨, API 푸시 중단")
+                        print(f"  🚫 {filepath}: 충돌 마커 감지됨, 스킵")
                         continue
-                    
-                    # 기존 파일 SHA 가져오기
-                    try:
-                        existing = self.repo.get_contents(filepath, ref=branch)
-                        sha = existing.sha
-                    except:
-                        sha = None
-                    
-                    if sha:
-                        self.repo.update_file(filepath, f"🧬 {message}", content, sha, branch=branch)
-                    else:
-                        self.repo.create_file(filepath, f"🧬 {message}", content, branch=branch)
-                    
-                    print(f"  ✅ {filepath}")
+
+                    # Blob 생성 (UTF-8 base64 인코딩)
+                    blob = self.repo.create_git_blob(content, "utf-8")
+
+                    tree_elements.append({
+                        "path": filepath,
+                        "mode": "100644",  # regular file
+                        "type": "blob",
+                        "sha": blob.sha
+                    })
+                    print(f"  📄 {filepath} → blob {blob.sha[:8]}")
+
                 except Exception as file_err:
                     print(f"  ❌ {filepath}: {file_err}")
-            
-            # 최신 커밋 SHA 반환
-            ref = self.repo.get_git_ref(f"heads/{branch}")
-            return ref.object.sha
-            
+
+            if not tree_elements:
+                print("⚠️ API push: 유효한 파일 없음")
+                return None
+
+            # 5. 새 Tree 생성 (base_tree 위에 변경사항 적용)
+            from github import InputGitTreeElement
+            git_tree_elements = [
+                InputGitTreeElement(
+                    path=elem["path"],
+                    mode=elem["mode"],
+                    type=elem["type"],
+                    sha=elem["sha"]
+                )
+                for elem in tree_elements
+            ]
+            new_tree = self.repo.create_git_tree(git_tree_elements, base_tree=self.repo.get_git_tree(base_tree_sha))
+            print(f"  🌳 새 Tree: {new_tree.sha[:8]}")
+
+            # 6. 새 Commit 생성 (parent = 현재 원격 HEAD)
+            new_commit = self.repo.create_git_commit(
+                message=f"🧬 {message}",
+                tree=new_tree,
+                parents=[head_commit]
+            )
+            print(f"  ✨ 새 Commit: {new_commit.sha[:8]}")
+
+            # 7. Ref 업데이트 (원격 HEAD를 새 커밋으로)
+            ref.edit(sha=new_commit.sha, force=True)
+            print(f"  🔗 Ref 업데이트: {branch} → {new_commit.sha[:8]}")
+
+            # 8. 검증
+            updated_ref = self.repo.get_git_ref(f"heads/{branch}")
+            if updated_ref.object.sha == new_commit.sha:
+                print(f"✅ API push 성공! 원격 HEAD: {new_commit.sha[:8]}")
+                return new_commit.sha
+            else:
+                print(f"⚠️ Ref 업데이트 실패: {updated_ref.object.sha[:8]} != {new_commit.sha[:8]}")
+                return None
+
         except Exception as e:
             print(f"❌ API push 실패: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def get_commit_url(self, sha: str) -> str:
