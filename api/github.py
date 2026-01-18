@@ -305,19 +305,32 @@ class GitHubClient:
 
             import subprocess
             import base64
+            import os
+
+            # 제외할 파일 패턴 (캐시, 설정, 바이너리)
+            EXCLUDE_PATTERNS = [
+                '.ain_cache/', '.claude/settings.local', '/data/', 'lancedb/',
+                '.arrow', '.pyc', '__pycache__', '.env', '.venv'
+            ]
 
             # 1. 변경된 파일 목록 가져오기
             diff_result = subprocess.run(
                 [git_path, "diff", "--name-only", f"origin/{branch}"],
                 capture_output=True, text=True
             )
-            changed_files = [f.strip() for f in diff_result.stdout.strip().split('\n') if f.strip()]
+            all_changed = [f.strip() for f in diff_result.stdout.strip().split('\n') if f.strip()]
+
+            # 제외 패턴 필터링
+            changed_files = [
+                f for f in all_changed
+                if not any(pat in f for pat in EXCLUDE_PATTERNS)
+            ]
 
             if not changed_files:
-                print("⚠️ API push: 변경된 파일 없음")
+                print(f"⚠️ API push: 유효한 파일 없음 (전체 {len(all_changed)}개 중 모두 제외됨)")
                 return None
 
-            print(f"📤 API push (Git Data API): {len(changed_files)} files")
+            print(f"📤 API push (Git Data API): {len(changed_files)} files (제외: {len(all_changed) - len(changed_files)})")
 
             # 2. 현재 원격 HEAD SHA 가져오기
             ref = self.repo.get_git_ref(f"heads/{branch}")
@@ -330,14 +343,34 @@ class GitHubClient:
 
             # 4. 변경된 파일들의 blob 생성 및 tree element 준비
             tree_elements = []
+            skipped_reasons = {"not_found": 0, "conflict": 0, "binary": 0, "error": 0}
+
             for filepath in changed_files:
                 try:
+                    # 파일 존재 확인
+                    if not os.path.exists(filepath):
+                        print(f"  ⚠️ {filepath}: 파일 없음 (삭제됨?)")
+                        skipped_reasons["not_found"] += 1
+                        continue
+
+                    # 바이너리 파일 체크
+                    try:
+                        with open(filepath, 'rb') as f:
+                            chunk = f.read(8192)
+                            if b'\x00' in chunk:
+                                print(f"  ⚠️ {filepath}: 바이너리 파일, 스킵")
+                                skipped_reasons["binary"] += 1
+                                continue
+                    except:
+                        pass
+
                     with open(filepath, 'r', encoding='utf-8') as f:
                         content = f.read()
 
                     # 충돌 마커 안전 검사
                     if any(m in content for m in ['<<<<<<<', '=======', '>>>>>>>']):
                         print(f"  🚫 {filepath}: 충돌 마커 감지됨, 스킵")
+                        skipped_reasons["conflict"] += 1
                         continue
 
                     # Blob 생성 (UTF-8 base64 인코딩)
@@ -352,7 +385,10 @@ class GitHubClient:
                     print(f"  📄 {filepath} → blob {blob.sha[:8]}")
 
                 except Exception as file_err:
-                    print(f"  ❌ {filepath}: {file_err}")
+                    print(f"  ❌ {filepath}: {type(file_err).__name__}: {file_err}")
+                    skipped_reasons["error"] += 1
+
+            print(f"  📊 스킵 요약: {skipped_reasons}")
 
             if not tree_elements:
                 print("⚠️ API push: 유효한 파일 없음")
