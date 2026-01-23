@@ -1,0 +1,342 @@
+{
+  "errors": {
+    "database/lance_bridge.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 208) (<coder_output>, line 208)",
+        "timestamp": "2026-01-13T16:08:17.699706"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 215) (<coder_output>, line 215)",
+        "timestamp": "2026-01-13T16:08:57.460365"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 209) (<coder_output>, line 209)",
+        "timestamp": "2026-01-13T16:09:37.779506"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 205) (<coder_output>, line 205)",
+        "timestamp": "2026-01-13T16:10:13.451480"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.753481"
+      }
+    ],
+    "nexus/retrieval.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 208) (<coder_output>, line 208)",
+        "timestamp": "2026-01-13T16:08:17.702909"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 215) (<coder_output>, line 215)",
+        "timestamp": "2026-01-13T16:08:57.464432"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 209) (<coder_output>, line 209)",
+        "timestamp": "2026-01-13T16:09:37.782793"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 205) (<coder_output>, line 205)",
+        "timestamp": "2026-01-13T16:10:13.455664"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.819116"
+      }
+    ],
+    "engine/prompts.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 208) (<coder_output>, line 208)",
+        "timestamp": "2026-01-13T16:08:17.706633"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 215) (<coder_output>, line 215)",
+        "timestamp": "2026-01-13T16:08:57.469186"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 209) (<coder_output>, line 209)",
+        "timestamp": "2026-01-13T16:09:37.787583"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 205) (<coder_output>, line 205)",
+        "timestamp": "2026-01-13T16:10:13.460300"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.896589"
+      }
+    ],
+    "nexus/memory.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 208) (<coder_output>, line 208)",
+        "timestamp": "2026-01-13T16:08:17.701846"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 215) (<coder_output>, line 215)",
+        "timestamp": "2026-01-13T16:08:57.463083"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 209) (<coder_output>, line 209)",
+        "timestamp": "2026-01-13T16:09:37.781651"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 205) (<coder_output>, line 205)",
+        "timestamp": "2026-01-13T16:10:13.454379"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.803836"
+      }
+    ],
+    "api/openrouter.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 185) (<coder_output>, line 185)",
+        "timestamp": "2026-01-13T06:38:22.533834"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 189) (<coder_output>, line 189)",
+        "timestamp": "2026-01-13T06:38:58.647248"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 186) (<coder_output>, line 186)",
+        "timestamp": "2026-01-13T06:39:33.859626"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 181) (<coder_output>, line 181)",
+        "timestamp": "2026-01-13T06:40:11.648546"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 176) (<coder_output>, line 176)",
+        "timestamp": "2026-01-13T06:40:50.467467"
+      }
+    ],
+    "engine/evolution.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 181) (<coder_output>, line 181)",
+        "timestamp": "2026-01-13T08:16:47.678484"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 282) (<coder_output>, line 282)",
+        "timestamp": "2026-01-13T08:17:40.527771"
+      },
+      {
+        "type": "expected an indented block after 'try' statement on line 282",
+        "details": "expected an indented block after 'try' statement on line 282 (<coder_output>, line 283)",
+        "timestamp": "2026-01-13T08:18:31.954280"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 209) (<coder_output>, line 209)",
+        "timestamp": "2026-01-13T08:19:13.198573"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 215) (<coder_output>, line 215)",
+        "timestamp": "2026-01-13T08:19:59.176500"
+      }
+    ],
+    "retrieval.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 211) (<coder_output>, line 211)",
+        "timestamp": "2026-01-13T08:51:25.746774"
+      }
+    ],
+    "database/embedding_service.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 208) (<coder_output>, line 208)",
+        "timestamp": "2026-01-13T16:08:17.700699"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 215) (<coder_output>, line 215)",
+        "timestamp": "2026-01-13T16:08:57.461818"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 209) (<coder_output>, line 209)",
+        "timestamp": "2026-01-13T16:09:37.780705"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 205) (<coder_output>, line 205)",
+        "timestamp": "2026-01-13T16:10:13.452988"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.787710"
+      }
+    ],
+    "muse.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 173) (<coder_output>, line 173)",
+        "timestamp": "2026-01-13T11:40:54.712541"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 214) (<coder_output>, line 214)",
+        "timestamp": "2026-01-13T13:21:51.079440"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 322) (<coder_output>, line 322)",
+        "timestamp": "2026-01-13T13:22:52.401555"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 272) (<coder_output>, line 272)",
+        "timestamp": "2026-01-13T13:23:39.760054"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 387) (<coder_output>, line 387)",
+        "timestamp": "2026-01-13T13:24:46.952700"
+      }
+    ],
+    "consolidation.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 236) (<coder_output>, line 236)",
+        "timestamp": "2026-01-13T11:38:38.662693"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 197) (<coder_output>, line 197)",
+        "timestamp": "2026-01-13T11:39:13.122422"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 176) (<coder_output>, line 176)",
+        "timestamp": "2026-01-13T11:39:46.068726"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 192) (<coder_output>, line 192)",
+        "timestamp": "2026-01-13T11:40:22.247399"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 173) (<coder_output>, line 173)",
+        "timestamp": "2026-01-13T11:40:54.713951"
+      }
+    ],
+    "engine/consolidation.py": [
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.729461"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.835127"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.850856"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.858677"
+      },
+      {
+        "type": "unterminated string literal",
+        "details": "unterminated string literal (detected at line 207) (<coder_output>, line 207)",
+        "timestamp": "2026-01-13T16:10:52.903791"
+      }
+    ],
+    "loop.py": [
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 106)",
+        "timestamp": "2026-01-20T19:25:16.932654"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 97)",
+        "timestamp": "2026-01-20T19:25:59.377495"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 118)",
+        "timestamp": "2026-01-20T19:26:33.157674"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 97)",
+        "timestamp": "2026-01-20T19:27:18.527142"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 100)",
+        "timestamp": "2026-01-20T19:27:53.276537"
+      }
+    ],
+    "engine/meta_feedback.py": [
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 106)",
+        "timestamp": "2026-01-20T19:25:16.934442"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 97)",
+        "timestamp": "2026-01-20T19:25:59.378058"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 118)",
+        "timestamp": "2026-01-20T19:26:33.158194"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 97)",
+        "timestamp": "2026-01-20T19:27:18.527728"
+      },
+      {
+        "type": "invalid syntax. Perhaps you forgot a comma?",
+        "details": "invalid syntax. Perhaps you forgot a comma? (<coder_output>, line 100)",
+        "timestamp": "2026-01-20T19:27:53.277066"
+      }
+    ]
+  },
+  "patterns": {
+    "syntax_error": 1,
+    "unterminated string literal": 432,
+    "expected an indented block after 'try' statement on line 282": 5,
+    "invalid syntax. Perhaps you forgot a comma?": 10
+  },
+  "updated_at": "2026-01-23T10:17:46.222518"
+}

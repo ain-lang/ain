@@ -1,0 +1,37 @@
+# AIN (AI-Native) Project Rules
+
+## 🛡️ Core Operational Philosophy
+- **Solve the Root, Not Just the Symptom**: Never apply quick fixes. Trace issues to their architectural origin and implement systemic solutions.
+- **Genetic Improvement**: Every manual fix or intervention must improve AIN's autonomous capabilities or validation logic.
+- **Architecture-First**: All changes must respect the 4-quadrant cognitive architecture:
+    - **Fact Core (Left-Brain / Static Logic)**: Symbolic Graph, Knowledge Base.
+    - **Nexus (Left-Brain / Static Memory)**: Vector Memory, History.
+    - **Muse (Right-Brain / Dynamic Imagination)**: Strategy, Code Generation.
+    - **Overseer (Right-Brain / Dynamic Action)**: Validation, Execution, Git.
+
+## 📝 Coding Standards
+- **Naming Convention**: Use `snake_case` strictly for all filenames and variables (e.g., `surreal_bridge.py`, NOT `surrealBridge.py`).
+- **Modularity**: Keep files small (prefer < 100 lines, absolute max 150). Create new modules in `engine/`, `nexus/`, or `utils/` instead of expanding existing large files.
+- **Whole-File Principle**: AIN's internal Coder always generates full file contents. Avoid partial updates or diff formats.
+- **Documentation**: Use docstrings to explain the "intent" and "role" of each module.
+
+## 🔒 Protected Files & Directories
+The following are critical for system survival and should not be modified unless the core architecture is being redesigned:
+- `main.py`: The system heart and supervisor.
+- `api/keys.py`: API credentials and critical config (SSOT).
+- `api/github.py`: Version control integration.
+- `.ainprotect`: Protection system definition.
+- `overseer.py`: The execution and validation engine.
+
+## 🧬 Evolution Rules
+- **Incremental Evolution**: Build one small functional block at a time. Do not attempt massive refactors in a single cycle.
+- **Verification**: Changes are only valid if they pass `Overseer.validate_code()` and project-wide unit tests.
+- **No-Change Avoidance**: Ensure functional improvements exist in every commit. If no change is needed, signal `NO_EVOLUTION_NEEDED`.
+
+## 🌐 Communication
+- **Language**: Always respond in **Korean (한국어)** as per the creator's rule.
+- **Status Reporting**: Use professional but friendly tone, reporting progress via Telegram format when required.
+
+## 🛠️ Root Cause Handling (Self-Healing)
+- **Syntax Guards**: Automatically detect and fix common LLM errors like `unterminated string literals` by checking quote counts.
+- **Conflict Cleaning**: Automatically remove Git conflict markers and diff indicators from generated code before applying.

@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.bak
+last_crash.log
+test_*.json
+test_cc_fact.json
+
+# AIN 캐시 (Railway에서 생성됨)
+.ain_cache/
+*.arrow
+
+# Claude 로컬 설정
+.claude/settings.local.json
+
+# LanceDB 데이터 (볼륨에 저장)
+/data/
+lancedb/

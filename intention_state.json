@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-01-19T07:10:08.468302",
+  "goals": [
+    {
+      "id": "1ebb850f",
+      "content": "실시간 추론 경로 감사 및 논리적 오류 자가 진단 메커니즘 구축",
+      "priority": 9,
+      "status": "pending",
+      "created_at": "2026-01-19T07:10:08.467291",
+      "deadline": null,
+      "metadata": {
+        "focus": "step_7_meta_cognition",
+        "source": "auto_generated"
+      }
+    },
+    {
+      "id": "f170f4d1",
+      "content": "지식의 한계와 경계를 식별하기 위한 동적 불확실성 정량화 알고리즘 개발",
+      "priority": 8,
+      "status": "pending",
+      "created_at": "2026-01-19T07:10:08.468112",
+      "deadline": null,
+      "metadata": {
+        "focus": "step_7_meta_cognition",
+        "source": "auto_generated"
+      }
+    },
+    {
+      "id": "a17979c2",
+      "content": "수행 결과의 피드백을 내부 아키텍처에 반영하는 재귀적 자기 최적화 루프 구현",
+      "priority": 7,
+      "status": "pending",
+      "created_at": "2026-01-19T07:10:08.468299",
+      "deadline": null,
+      "metadata": {
+        "focus": "step_7_meta_cognition",
+        "source": "auto_generated"
+      }
+    }
+  ]
+}
