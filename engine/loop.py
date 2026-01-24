@@ -17,6 +17,7 @@ from engine.loop_strategy import get_loop_strategy_manager, initialize_loop_stra
 
 # Step 8: Intuition & Decision Gate
 from engine.decision_gate import DecisionGate, ExecutionPath
+from engine.handlers import HandlersMixin
 
 # Step 9: Temporal Self
 from engine.temporal_integration import activate_temporal_awareness, tick_temporal_integration
@@ -106,6 +107,11 @@ def run_engine():
                 last_update_id = msg["update_id"]
                 ain.introspect(user_query=msg["text"])
                 last_periodic_check = time.time()
+
+            # --- 시스템 일시 정지 체크 ---
+            if not HandlersMixin._system_running:
+                time.sleep(1)
+                continue
 
             # --- High-Frequency Ticks (1s resolution) ---
 

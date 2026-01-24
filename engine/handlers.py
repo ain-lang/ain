@@ -11,7 +11,10 @@ DEFAULT_INTERVAL = config["evolution_interval"]
 
 class HandlersMixin:
     """명령어 처리 믹스인 - AINCore에서 사용"""
-    
+
+    # 시스템 실행 상태 플래그
+    _system_running: bool = True
+
     def handle_telegram_command(self, command: str, args: str = None) -> str:
         """텔레그램 명령어 처리 (API용)"""
         if command == "/status":
@@ -147,5 +150,13 @@ class HandlersMixin:
                 f"• CC left_brain == fact_core: {self.cc.left_brain is self.fact_core}"
             )
             self.send_telegram_msg(debug_info)
+            return True
+        elif cmd == "/stop":
+            HandlersMixin._system_running = False
+            self.send_telegram_msg("⏸️ **시스템 일시 정지**\n진화/독백 사이클이 중단되었습니다.\n`/start`로 재시작하세요.")
+            return True
+        elif cmd == "/start":
+            HandlersMixin._system_running = True
+            self.send_telegram_msg("▶️ **시스템 재시작**\n진화/독백 사이클이 재개되었습니다! 🚀")
             return True
         return False
